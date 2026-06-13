@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Viral AI LinkedIn Post Generator",
-  description: "Generate highly optimized, trending LinkedIn posts using AI.",
+  title: "Virality Mapper | Premium AI LinkedIn Ghostwriter",
+  description: "Analyze top LinkedIn trends in real-time and generate highly optimized, high-impact post variants with advanced AI critiques.",
 };
 
 export default function RootLayout({
