@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sparkles, Cpu, Key, Sliders, Globe, Activity } from "lucide-react";
+import { Sparkles, Cpu, Key, Sliders, Globe, Activity, Archive } from "lucide-react";
 import PostGeneratorForm from "@/components/PostGeneratorForm";
 import ResultsDisplay from "@/components/ResultsDisplay";
 import AgentPlayground from "@/components/AgentPlayground";
@@ -101,16 +101,19 @@ const DEFAULT_KEYS: ApiKeys = {
 };
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"workspace" | "agents" | "settings">("workspace");
+  const [activeTab, setActiveTab] = useState<"workspace" | "agents" | "settings" | "archive">("workspace");
   const [apiKeys, setApiKeys] = useState<ApiKeys>(DEFAULT_KEYS);
   const [agents, setAgents] = useState<Agent[]>(DEFAULT_AGENTS);
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [archive, setArchive] = useState<any[]>([]);
+  const [selectedArchiveId, setSelectedArchiveId] = useState<string | null>(null);
 
   // Sync state from LocalStorage on mount
   useEffect(() => {
     const keysData = localStorage.getItem("vm_api_keys");
     const agentsData = localStorage.getItem("vm_agents_config");
+    const archiveData = localStorage.getItem("vm_post_archive");
 
     if (keysData) {
       try { setApiKeys(JSON.parse(keysData)); } catch (e) {}
@@ -137,6 +140,17 @@ export default function Home() {
       localStorage.setItem("vm_agents_config", JSON.stringify(DEFAULT_AGENTS));
     }
     setAgents(loadedAgents);
+
+    if (archiveData) {
+      try {
+        const parsedArchive = JSON.parse(archiveData);
+        setArchive(parsedArchive);
+        if (parsedArchive.length > 0) {
+          setSelectedArchiveId(parsedArchive[0].id);
+        }
+      } catch (e) {}
+    }
+
     setLoaded(true);
   }, []);
 
@@ -153,6 +167,36 @@ export default function Home() {
   const handleToggleAgent = (id: string) => {
     const updated = agents.map((a) => (a.id === id ? { ...a, enabled: !a.enabled } : a));
     updateAgents(updated);
+  };
+
+  const handleGenerateComplete = (data: any) => {
+    setResult(data);
+    const newArchivedItem = {
+      id: `arch-${Date.now()}`,
+      timestamp: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
+      appName: data.appName || "LinkedIn Post",
+      description: data.description || "",
+      targetAudience: data.targetAudience || "",
+      tone: data.tone || "",
+      result: data
+    };
+    setArchive(prev => {
+      const updated = [newArchivedItem, ...prev];
+      localStorage.setItem("vm_post_archive", JSON.stringify(updated));
+      return updated;
+    });
+    setSelectedArchiveId(newArchivedItem.id);
+  };
+
+  const handleDeleteArchive = (id: string) => {
+    setArchive(prev => {
+      const updated = prev.filter(item => item.id !== id);
+      localStorage.setItem("vm_post_archive", JSON.stringify(updated));
+      if (selectedArchiveId === id) {
+        setSelectedArchiveId(updated.length > 0 ? updated[0].id : null);
+      }
+      return updated;
+    });
   };
 
   if (!loaded) {
@@ -183,6 +227,13 @@ export default function Home() {
           >
             <Sparkles size={14} />
             <span>Workspace</span>
+          </div>
+          <div
+            className={`nav-item ${activeTab === "archive" ? "active" : ""}`}
+            onClick={() => setActiveTab("archive")}
+          >
+            <Archive size={14} />
+            <span>Post Archive</span>
           </div>
           <div
             className={`nav-item ${activeTab === "agents" ? "active" : ""}`}
@@ -227,6 +278,7 @@ export default function Home() {
           <div className="flex items-center justify-between max-w-6xl mx-auto">
             <h1 style={{ fontSize: "1.25rem", fontWeight: 800 }}>
               {activeTab === "workspace" && "Writing Console"}
+              {activeTab === "archive" && "Archived Publications"}
               {activeTab === "agents" && "Agent Customizer"}
               {activeTab === "settings" && "Credentials Manager"}
             </h1>
@@ -238,32 +290,119 @@ export default function Home() {
         </header>
 
         <div className="container" style={{ padding: "32px 32px 48px", overflowY: "auto" }}>
-          {activeTab === "workspace" && (
-            <div className="flex flex-col gap-6">
-              <PostGeneratorForm
-                agents={agents}
-                apiKeys={apiKeys}
-                onGenerate={(data) => setResult(data)}
-                onToggleAgent={handleToggleAgent}
-              />
-              {result && <ResultsDisplay result={result} />}
-            </div>
-          )}
+          {/* Workspace Tab */}
+          <div style={{ display: activeTab === "workspace" ? "flex" : "none", flexDirection: "column", gap: "24px" }} className="w-full">
+            <PostGeneratorForm
+              agents={agents}
+              apiKeys={apiKeys}
+              onGenerate={handleGenerateComplete}
+              onStartGenerate={() => setResult(null)}
+              onToggleAgent={handleToggleAgent}
+            />
+            {result && <ResultsDisplay result={result} />}
+          </div>
 
-          {activeTab === "agents" && (
+          {/* Agent Customizer Tab */}
+          <div style={{ display: activeTab === "agents" ? "block" : "none" }} className="w-full">
             <AgentPlayground
               agents={agents}
               apiKeys={apiKeys}
               onUpdateAgents={updateAgents}
             />
-          )}
+          </div>
 
-          {activeTab === "settings" && (
+          {/* Credentials Manager Tab */}
+          <div style={{ display: activeTab === "settings" ? "block" : "none" }} className="w-full">
             <SettingsTab
               apiKeys={apiKeys}
               onSave={updateApiKeys}
             />
-          )}
+          </div>
+
+          {/* Post Archive tab */}
+          <div style={{ display: activeTab === "archive" ? "block" : "none" }} className="anim-fade-up w-full">
+            {archive.length === 0 ? (
+              <div className="glass-panel p-12 text-center flex flex-col items-center justify-center gap-4" style={{ minHeight: "400px" }}>
+                <Archive size={48} className="text-zinc-600 animate-pulse" />
+                <h3 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0 }}>No archived publications</h3>
+                <p style={{ fontSize: "0.85rem", color: "var(--zinc-500)", maxWidth: "320px", margin: 0 }}>
+                  Start running 3-agent debates in the Workspace. Completed posts are automatically saved here!
+                </p>
+              </div>
+            ) : (
+              <div className="grid" style={{ gridTemplateColumns: "320px 1fr", gap: "24px", alignItems: "start" }}>
+                {/* Left pane: Archive List */}
+                <div className="flex flex-col gap-3 max-h-[750px] overflow-y-auto pr-2" style={{ borderRight: "1px solid var(--zinc-900)" }}>
+                  {archive.map((item) => (
+                    <div
+                      key={item.id}
+                      className="glass-panel p-4 flex flex-col gap-2 cursor-pointer transition-all"
+                      style={{
+                        borderColor: selectedArchiveId === item.id ? "var(--accent)" : "var(--zinc-800)",
+                        background: selectedArchiveId === item.id ? "rgba(244, 63, 94, 0.03)" : "rgba(10,10,12,0.3)"
+                      }}
+                      onClick={() => setSelectedArchiveId(item.id)}
+                    >
+                      <div className="flex justify-between items-start gap-2">
+                        <h4 style={{ fontSize: "0.85rem", fontWeight: 700, margin: 0 }} className="line-clamp-1">
+                          {item.appName}
+                        </h4>
+                        <span className="custom-badge custom-badge-accent" style={{ fontSize: "0.6rem", padding: "2px 5px", flexShrink: 0 }}>
+                          Score: {item.result?.best?.score || 95}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: "0.75rem", color: "var(--zinc-500)", margin: 0 }} className="line-clamp-2">
+                        {item.description}
+                      </p>
+                      <div className="flex justify-between items-center mt-2" style={{ borderTop: "1px solid var(--zinc-900)", paddingTop: "8px", fontSize: "0.65rem", color: "var(--zinc-600)", fontFamily: "var(--font-mono)" }}>
+                        <span>{item.timestamp}</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteArchive(item.id);
+                          }}
+                          style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "0.65rem", fontFamily: "var(--font-mono)" }}
+                          className="hover:underline"
+                        >
+                          DELETE
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Right pane: Archive Details */}
+                <div className="flex flex-col gap-6">
+                  {archive.find(item => item.id === selectedArchiveId) ? (
+                    (() => {
+                      const selectedItem = archive.find(item => item.id === selectedArchiveId);
+                      return (
+                        <>
+                          <div className="glass-panel p-4 flex flex-col gap-3" style={{ background: "rgba(10,10,12,0.2)" }}>
+                            <div className="flex items-center gap-2" style={{ borderBottom: "1px solid var(--zinc-900)", paddingBottom: "8px" }}>
+                              <Sparkles size={13} className="text-zinc-500" />
+                              <span style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--zinc-400)" }}>Original Prompt Context</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 text-xs">
+                              <div><strong className="text-zinc-500">AppName:</strong> <span className="text-zinc-300">{selectedItem.appName}</span></div>
+                              <div><strong className="text-zinc-500">Tone:</strong> <span className="text-zinc-300">{selectedItem.tone || "General"}</span></div>
+                              <div style={{ gridColumn: "span 2" }}><strong className="text-zinc-500">Description:</strong> <span className="text-zinc-400 line-clamp-3">{selectedItem.description}</span></div>
+                              <div style={{ gridColumn: "span 2" }}><strong className="text-zinc-500">Target Audience:</strong> <span className="text-zinc-300">{selectedItem.targetAudience || "General Professionals"}</span></div>
+                            </div>
+                          </div>
+                          <ResultsDisplay result={selectedItem.result} />
+                        </>
+                      );
+                    })()
+                  ) : (
+                    <div className="glass-panel p-8 text-center text-zinc-500 text-xs">
+                      Select an archived post from the list to view details
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </main>
     </div>

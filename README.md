@@ -10,35 +10,37 @@ The core of Virality Mapper is its multi-phase consensus and debate architecture
 
 ```mermaid
 graph TD
-    A[User Inputs appName, description, tone] --> B[Server-Side Scraper]
-    B -->|Search Trends site:linkedin.com| C[Live Trends Context]
+    A[User Inputs appName, description, tone] --> B[Dynamic Topic Analyzer]
+    B -->|Extracts 2-3 Broad Niche Topics| C[Parallel Regional Scraper]
+    C -->|Targeting India site:linkedin.com &kl=in-en| D[Live Trends Context]
     
-    C --> D[Phase 1: Concurrent Drafting]
-    D --> D1[Agent Alpha: Hook & Structure]
-    D --> D2[Agent Beta: Analytical & Metrics]
-    D --> D3[Agent Gamma: Narrative & Story]
+    D --> E[Phase 1: Concurrent Drafting]
+    E --> E1[Agent Alpha: Hook & Structure]
+    E --> E2[Agent Beta: Analytical & Metrics]
+    E --> E3[Agent Gamma: Narrative & Story]
     
-    D1 & D2 & D3 --> E[Phase 2: Bidirectional Peer Critique Arena]
+    E1 & E2 & E3 --> F[Phase 2: Bidirectional Peer Critique Arena]
     
-    E -->|1 -> 2| E12[Alpha critiques Beta]
-    E -->|2 -> 1| E21[Beta critiques Alpha]
-    E -->|2 -> 3| E23[Beta critiques Gamma]
-    E -->|3 -> 2| E32[Gamma critiques Beta]
-    E -->|1 -> 3| E13[Alpha critiques Gamma]
-    E -->|3 -> 1| E31[Gamma critiques Alpha]
+    F -->|1 -> 2| F12[Alpha critiques Beta]
+    F -->|2 -> 1| F21[Beta critiques Alpha]
+    F -->|2 -> 3| F23[Beta critiques Gamma]
+    F -->|3 -> 2| F32[Gamma critiques Beta]
+    F -->|1 -> 3| F13[Alpha critiques Gamma]
+    F -->|3 -> 1| F31[Gamma critiques Alpha]
     
-    E12 & E21 & E23 & E32 & E13 & E31 --> F[Phase 3: Concurrent Refinement]
-    F --> F1[Agent Alpha rewrites post using Beta/Gamma critiques]
-    F --> F2[Agent Beta rewrites post using Alpha/Gamma critiques]
-    F --> F3[Agent Gamma rewrites post using Alpha/Beta critiques]
+    F12 & F21 & F23 & F32 & F13 & F31 --> G[Phase 3: Concurrent Refinement]
+    G --> G1[Agent Alpha rewrites post using Beta/Gamma critiques]
+    G --> G2[Agent Beta rewrites post using Alpha/Gamma critiques]
+    G --> G3[Agent Gamma rewrites post using Alpha/Beta critiques]
     
-    F1 & F2 & F3 --> G[Phase 4: Consensus Settle Panel]
-    G --> H[Synthesized Ultimate Post & Rationale]
+    G1 & G2 & G3 --> H[Phase 4: Consensus Settle Panel]
+    H --> I[Synthesized Ultimate Post & Rationale]
 ```
 
 ### Phase 1: Real-Time Trend Grounding & Drafting
-- **Scraper Module**: The Next.js API route runs a server-side DuckDuckGo search query targeting `site:linkedin.com` posts related to the user's topic.
-- **Drafting**: The live search trends are fed into the system context. The three specialist agents generate their initial drafts concurrently:
+- **Dynamic Topic Analyzer**: Automatically parses user inputs (`appName`, `description`, `targetAudience`) using an LLM model before running search queries. It extracts 2-3 broader, high-volume industry keywords/niche topics, ensuring that brand-new projects still find highly relevant, active post contexts.
+- **Parallel Regional Scraper**: Triggers concurrent DuckDuckGo searches for each extracted topic, restricting results to English posts from India (`&kl=in-en` parameter with `site:linkedin.com`) to ground draft copy in localized professional trends.
+- **Drafting**: The live search trends are aggregated, deduplicated, and injected into the copywriters' environment. The three specialist agents generate their initial drafts concurrently:
   - **Agent Alpha (Hook & Structure)**: Specializes in scroll-stopping pattern-interrupt hooks, crisp visual breaks, and maximized CTR.
   - **Agent Beta (Analytical & Metrics)**: Focuses on checklists, bold numbers, clear business metrics, and raw value.
   - **Agent Gamma (Narrative & Story)**: Employs the hero's journey, lessons learned, and brand vulnerability.
@@ -61,20 +63,16 @@ The 3 refined drafts, their critique histories, and self-change arguments are co
 
 ## ✨ Key Features
 
-- **Live Trend Grounding**: Automatically searches the web to extract what hook styles and keywords are currently performing on LinkedIn for your specific topic.
-- **Dynamic Model Selection**: Connect your credentials and dynamically pull the list of active models directly from the provider.
-- **Debate Customization**: Customize prompts, temperature values, providers, and models for each of the three copywriting agents. They can all run on the same API key/model (e.g. Gemini) or distinct providers (Gemini, OpenAI, Anthropic, Ollama, etc.) for a true multi-model debate.
-- **Diverse LLM Providers**:
-  - **Cloud**: Google Gemini, OpenAI, Anthropic
-  - **Router**: OpenRouter (Groq, DeepSeek, Together AI, Mistral)
-  - **Local**: Ollama and LM Studio (via local developer REST endpoints)
-  - **Custom**: Any custom OpenAI-compatible endpoint.
-- **In-App Credentials Manager**: Manage API keys and endpoints securely inside the UI (cached in `localStorage`). No keys are saved on a database or backend.
-- **Interactive Timeline Logs**: Redesigned Results view featuring sub-tabs to inspect:
-  - *Phase 1: Initial Drafts* (showing initial drafts and their hook strategies).
-  - *Phase 2: Critique Arena* (showing all 6 peer critique ratings and comments).
-  - *Phase 3: Refined Drafts* (showing the rewritten posts and change arguments).
-- **Vercel-Inspired Minimalist UI**: Typographic dark theme focusing on precise whitespace, clean monospace layouts, thin borders, and structured grids.
+- **Live Trend Grounding**: Automatically extracts real-time professional hooks and trending structures from LinkedIn posts via parallel regional scrapers (targeted to India).
+- **Dynamic Model Selection**: Connect credentials and dynamically retrieve active model lists from various providers.
+- **Persistent Post Archive**: Saves all generated runs locally inside your browser's `localStorage`. Review previous generations, browse drafts and peer review ratings, or delete old entries in a clean split-pane history viewer.
+- **Stable Tab State Memory**: Navigating between Workspace, Settings, and Agents tabs keeps the generation state, stream readers, and typewriter animations running smoothly in the background without unmounting.
+- **Live System Activity logs & Stopwatch**: Exposes an interactive Stopwatch elapsed timer and a dark monospace logs feed. Tracks scraper actions, prompt details, api query durations, quota limits, and automatic exponential backoff retries.
+- **Debate Customization**: Configure custom prompts, temperature values, models, and endpoints for each of the three copywriting agents individually.
+- **Diverse LLM Providers**: Support for Google Gemini, OpenAI, Anthropic, OpenRouter, local models (Ollama, LM Studio), and custom API proxies.
+- **In-App Credentials Manager**: Store API keys securely in `localStorage` (never shared with a backend or database).
+- **Interactive Timeline Logs**: Toggle tabs to explore the inner mechanics of the debate: initial drafts, bidirectional critique score sheets, refined drafts, and consolidated outputs.
+- **Vercel-Inspired Minimalist UI**: Typographic dark theme focusing on precise whitespace, clean monospace grids, and micro-interactions.
 
 ---
 
