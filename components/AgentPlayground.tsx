@@ -36,16 +36,26 @@ const PROVIDERS = [
   { id: "custom", name: "Custom OpenAI Endpoint" },
 ];
 
+interface CustomModel {
+  id: string;
+  name: string;
+  provider: string;
+  contextLength?: number;
+  maxOutputTokens?: number;
+}
+
 export default function AgentPlayground({
   agents,
   apiKeys,
   onUpdateAgents,
   onResetAgents,
+  customModels = [],
 }: {
   agents: Agent[];
   apiKeys: ApiKeys;
   onUpdateAgents: (agents: Agent[]) => void;
   onResetAgents: () => void;
+  customModels?: CustomModel[];
 }) {
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
   const [models, setModels] = useState<string[]>([]);
@@ -83,11 +93,24 @@ export default function AgentPlayground({
         body: JSON.stringify({ provider, apiKey, customUrl }),
       });
       const data = await res.json();
+      
+      let fetchedModels: string[] = [];
       if (res.ok && data.success && data.models) {
-        setModels(data.models);
+        fetchedModels = data.models;
       }
+      
+      const localCustom = customModels
+        .filter((m) => m.provider === provider)
+        .map((m) => m.id);
+      
+      const merged = Array.from(new Set([...fetchedModels, ...localCustom]));
+      setModels(merged);
     } catch (e) {
       console.error("Failed to load models dynamically:", e);
+      const localCustom = customModels
+        .filter((m) => m.provider === provider)
+        .map((m) => m.id);
+      setModels(localCustom);
     } finally {
       setLoadingModels(false);
     }

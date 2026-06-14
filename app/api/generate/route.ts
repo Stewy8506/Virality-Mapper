@@ -44,22 +44,32 @@ async function callLLM(
   systemPrompt: string,
   userPrompt: string,
   temperature: number,
-  apiKeys: any
+  apiKeys: any,
+  advancedParams?: any
 ): Promise<any> {
-  const cleanTemp = Math.max(0, Math.min(1, temperature));
+  const cleanTemp = Math.max(0, Math.min(2, advancedParams?.temperature !== undefined ? advancedParams.temperature : temperature));
 
   switch (provider) {
     case "gemini": {
       if (!apiKeys?.gemini) throw new Error("Gemini API Key is missing.");
       const ai = new GoogleGenAI({ apiKey: apiKeys.gemini });
+      
+      const config: any = {
+        systemInstruction: systemPrompt,
+        temperature: cleanTemp,
+        responseMimeType: "application/json",
+      };
+
+      if (advancedParams?.topP !== undefined) config.topP = advancedParams.topP;
+      if (advancedParams?.topK !== undefined) config.topK = advancedParams.topK;
+      if (advancedParams?.stopSequences) {
+        config.stopSequences = advancedParams.stopSequences.split(",").map((s: string) => s.trim()).filter(Boolean);
+      }
+
       const response = await ai.models.generateContent({
         model: model || "gemini-2.5-flash",
         contents: userPrompt,
-        config: {
-          systemInstruction: systemPrompt,
-          temperature: cleanTemp,
-          responseMimeType: "application/json",
-        },
+        config,
       });
       const parsed = robustJsonParse(response.text || "{}");
       return parsed.variants ? parsed.variants[0] : parsed;
@@ -68,7 +78,8 @@ async function callLLM(
     case "openai": {
       if (!apiKeys?.openai) throw new Error("OpenAI API Key is missing.");
       const openai = new OpenAI({ apiKey: apiKeys.openai });
-      const response = await openai.chat.completions.create({
+      
+      const body: any = {
         model: model || "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
@@ -76,7 +87,17 @@ async function callLLM(
         ],
         temperature: cleanTemp,
         response_format: { type: "json_object" },
-      });
+      };
+
+      if (advancedParams?.topP !== undefined) body.top_p = advancedParams.topP;
+      if (advancedParams?.presencePenalty !== undefined) body.presence_penalty = advancedParams.presencePenalty;
+      if (advancedParams?.frequencyPenalty !== undefined) body.frequency_penalty = advancedParams.frequencyPenalty;
+      if (advancedParams?.seed !== undefined) body.seed = advancedParams.seed;
+      if (advancedParams?.stopSequences) {
+        body.stop = advancedParams.stopSequences.split(",").map((s: string) => s.trim()).filter(Boolean);
+      }
+
+      const response = await openai.chat.completions.create(body);
       const text = response.choices[0].message.content || "{}";
       const parsed = robustJsonParse(text);
       return parsed.variants ? parsed.variants[0] : parsed;
@@ -85,7 +106,8 @@ async function callLLM(
     case "anthropic": {
       if (!apiKeys?.anthropic) throw new Error("Anthropic API Key is missing.");
       const anthropic = new Anthropic({ apiKey: apiKeys.anthropic });
-      const response = await anthropic.messages.create({
+      
+      const config: any = {
         model: model || "claude-3-5-sonnet-20241022",
         max_tokens: 2048,
         system: systemPrompt,
@@ -95,8 +117,15 @@ async function callLLM(
             content: `${userPrompt}\n\nCRITICAL: Respond with a raw, valid JSON object matching the format. Do not wrap in markdown backticks, and do not add conversational preamble.`,
           },
         ],
-        temperature: cleanTemp,
-      });
+        temperature: Math.min(1, cleanTemp), // Anthropic only supports 0 to 1 temperature range
+      };
+
+      if (advancedParams?.topP !== undefined) config.top_p = advancedParams.topP;
+      if (advancedParams?.stopSequences) {
+        config.stop_sequences = advancedParams.stopSequences.split(",").map((s: string) => s.trim()).filter(Boolean);
+      }
+
+      const response = await anthropic.messages.create(config);
 
       let text = "";
       if (response.content && response.content[0] && response.content[0].type === "text") {
@@ -112,7 +141,8 @@ async function callLLM(
         apiKey: apiKeys.openrouter,
         baseURL: "https://openrouter.ai/api/v1",
       });
-      const response = await openai.chat.completions.create({
+
+      const body: any = {
         model: model || "meta-llama/llama-3-8b-instruct:free",
         messages: [
           { role: "system", content: systemPrompt },
@@ -120,7 +150,17 @@ async function callLLM(
         ],
         temperature: cleanTemp,
         response_format: { type: "json_object" },
-      });
+      };
+
+      if (advancedParams?.topP !== undefined) body.top_p = advancedParams.topP;
+      if (advancedParams?.presencePenalty !== undefined) body.presence_penalty = advancedParams.presencePenalty;
+      if (advancedParams?.frequencyPenalty !== undefined) body.frequency_penalty = advancedParams.frequencyPenalty;
+      if (advancedParams?.seed !== undefined) body.seed = advancedParams.seed;
+      if (advancedParams?.stopSequences) {
+        body.stop = advancedParams.stopSequences.split(",").map((s: string) => s.trim()).filter(Boolean);
+      }
+
+      const response = await openai.chat.completions.create(body);
       const text = response.choices[0].message.content || "{}";
       const parsed = robustJsonParse(text);
       return parsed.variants ? parsed.variants[0] : parsed;
@@ -132,14 +172,25 @@ async function callLLM(
         apiKey: "ollama",
         baseURL,
       });
-      const response = await openai.chat.completions.create({
+
+      const body: any = {
         model: model || "llama3",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `${userPrompt}\n\nCRITICAL: Respond with a raw, valid JSON object matching the format. Do not wrap in markdown backticks, and do not add conversational preamble.` },
         ],
         temperature: cleanTemp,
-      });
+      };
+
+      if (advancedParams?.topP !== undefined) body.top_p = advancedParams.topP;
+      if (advancedParams?.presencePenalty !== undefined) body.presence_penalty = advancedParams.presencePenalty;
+      if (advancedParams?.frequencyPenalty !== undefined) body.frequency_penalty = advancedParams.frequencyPenalty;
+      if (advancedParams?.seed !== undefined) body.seed = advancedParams.seed;
+      if (advancedParams?.stopSequences) {
+        body.stop = advancedParams.stopSequences.split(",").map((s: string) => s.trim()).filter(Boolean);
+      }
+
+      const response = await openai.chat.completions.create(body);
       const text = response.choices[0].message.content || "{}";
       const parsed = robustJsonParse(text);
       return parsed.variants ? parsed.variants[0] : parsed;
@@ -151,14 +202,25 @@ async function callLLM(
         apiKey: "lmstudio",
         baseURL,
       });
-      const response = await openai.chat.completions.create({
+
+      const body: any = {
         model: model || "model-identifier",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `${userPrompt}\n\nCRITICAL: Respond with a raw, valid JSON object matching the format. Do not wrap in markdown backticks, and do not add conversational preamble.` },
         ],
         temperature: cleanTemp,
-      });
+      };
+
+      if (advancedParams?.topP !== undefined) body.top_p = advancedParams.topP;
+      if (advancedParams?.presencePenalty !== undefined) body.presence_penalty = advancedParams.presencePenalty;
+      if (advancedParams?.frequencyPenalty !== undefined) body.frequency_penalty = advancedParams.frequencyPenalty;
+      if (advancedParams?.seed !== undefined) body.seed = advancedParams.seed;
+      if (advancedParams?.stopSequences) {
+        body.stop = advancedParams.stopSequences.split(",").map((s: string) => s.trim()).filter(Boolean);
+      }
+
+      const response = await openai.chat.completions.create(body);
       const text = response.choices[0].message.content || "{}";
       const parsed = robustJsonParse(text);
       return parsed.variants ? parsed.variants[0] : parsed;
@@ -170,14 +232,25 @@ async function callLLM(
         apiKey: apiKeys.customApiKey || "custom",
         baseURL: apiKeys.customBaseUrl,
       });
-      const response = await openai.chat.completions.create({
+
+      const body: any = {
         model: model || "custom-model",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `${userPrompt}\n\nCRITICAL: Respond with a raw, valid JSON object matching the format. Do not wrap in markdown backticks, and do not add conversational preamble.` },
         ],
         temperature: cleanTemp,
-      });
+      };
+
+      if (advancedParams?.topP !== undefined) body.top_p = advancedParams.topP;
+      if (advancedParams?.presencePenalty !== undefined) body.presence_penalty = advancedParams.presencePenalty;
+      if (advancedParams?.frequencyPenalty !== undefined) body.frequency_penalty = advancedParams.frequencyPenalty;
+      if (advancedParams?.seed !== undefined) body.seed = advancedParams.seed;
+      if (advancedParams?.stopSequences) {
+        body.stop = advancedParams.stopSequences.split(",").map((s: string) => s.trim()).filter(Boolean);
+      }
+
+      const response = await openai.chat.completions.create(body);
       const text = response.choices[0].message.content || "{}";
       const parsed = robustJsonParse(text);
       return parsed.variants ? parsed.variants[0] : parsed;
@@ -188,13 +261,19 @@ async function callLLM(
   }
 }
 
-async function searchLinkedInTrends(query: string, serpapiKey?: string): Promise<string[]> {
-  const currentYear = new Date().getFullYear();
-  const searchQuery = `site:linkedin.com ${query} post ${currentYear}`;
+async function searchLinkedInTrends(
+  query: string,
+  serpapiKey?: string,
+  crawlerConfig?: { enginePriority: string[]; targetYear: number; serpapiEnabled: boolean }
+): Promise<string[]> {
+  const targetYear = crawlerConfig?.targetYear || new Date().getFullYear();
+  const searchQuery = `site:linkedin.com ${query} post ${targetYear}`;
   const userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
-  // Try SerpApi first if API key is provided
-  if (serpapiKey) {
+  const serpapiEnabled = crawlerConfig ? crawlerConfig.serpapiEnabled : true;
+
+  // Try SerpApi first if API key is provided and enabled in settings
+  if (serpapiKey && serpapiEnabled) {
     try {
       const url = `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(searchQuery)}&api_key=${serpapiKey}&tbs=qdr:m`;
       const res = await fetch(url);
@@ -215,132 +294,138 @@ async function searchLinkedInTrends(query: string, serpapiKey?: string): Promise
     }
   }
 
-  // Try Yahoo Search first (highly stable, simple div classes, no Cloudflare block)
-  try {
-    const url = `https://search.yahoo.com/search?q=${encodeURIComponent(searchQuery)}&age=1m`;
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": userAgent,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5"
-      }
-    });
+  // Follow engine fallbacks order from crawlerConfig
+  const priority = crawlerConfig?.enginePriority || ["yahoo", "duckduckgo_lite", "duckduckgo_html"];
 
-    if (res.status === 200) {
-      const html = await res.text();
-      const snippets: string[] = [];
-      const regex = /<div class="compText[^>]*>([\s\S]*?)<\/div>/gi;
-      let match;
-      while ((match = regex.exec(html)) !== null && snippets.length < 5) {
-        let snippet = match[1]
-          .replace(/<[^>]*>/g, "") // strip HTML tags
-          .replace(/&amp;/g, "&")
-          .replace(/&quot;/g, '"')
-          .replace(/&#x27;/g, "'")
-          .replace(/&lt;/g, "<")
-          .replace(/&gt;/g, ">")
-          .replace(/&hellip;/g, "...")
-          .replace(/\s+/g, " ")
-          .trim();
-        if (snippet) {
-          snippets.push(snippet);
+  for (const engine of priority) {
+    if (engine === "yahoo") {
+      try {
+        const url = `https://search.yahoo.com/search?q=${encodeURIComponent(searchQuery)}&age=1m`;
+        const res = await fetch(url, {
+          headers: {
+            "User-Agent": userAgent,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5"
+          }
+        });
+
+        if (res.status === 200) {
+          const html = await res.text();
+          const snippets: string[] = [];
+          const regex = /<div class="compText[^>]*>([\s\S]*?)<\/div>/gi;
+          let match;
+          while ((match = regex.exec(html)) !== null && snippets.length < 5) {
+            let snippet = match[1]
+              .replace(/<[^>]*>/g, "") // strip HTML tags
+              .replace(/&amp;/g, "&")
+              .replace(/&quot;/g, '"')
+              .replace(/&#x27;/g, "'")
+              .replace(/&lt;/g, "<")
+              .replace(/&gt;/g, ">")
+              .replace(/&hellip;/g, "...")
+              .replace(/\s+/g, " ")
+              .trim();
+            if (snippet) {
+              snippets.push(snippet);
+            }
+          }
+          if (snippets.length > 0) {
+            return snippets;
+          }
         }
+      } catch (err) {
+        console.warn("Yahoo search fetch failed, falling back in priority:", err);
       }
-      if (snippets.length > 0) {
-        return snippets;
+    } else if (engine === "duckduckgo_lite") {
+      try {
+        const url = `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(searchQuery)}&kl=in-en&df=m`;
+        const res = await fetch(url, {
+          headers: {
+            "User-Agent": userAgent,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5"
+          }
+        });
+
+        if (res.status === 200) {
+          const html = await res.text();
+          const snippets: string[] = [];
+          const regex = /<td class="result-snippet">([\s\S]*?)<\/td>/gi;
+          let match;
+          while ((match = regex.exec(html)) !== null && snippets.length < 5) {
+            let snippet = match[1]
+              .replace(/<[^>]*>/g, "") // strip HTML tags
+              .replace(/&amp;/g, "&")
+              .replace(/&quot;/g, '"')
+              .replace(/&#x27;/g, "'")
+              .replace(/&lt;/g, "<")
+              .replace(/&gt;/g, ">")
+              .replace(/\s+/g, " ")
+              .trim();
+            if (snippet && !snippet.includes("JavaScript is required")) {
+              snippets.push(snippet);
+            }
+          }
+          if (snippets.length > 0) {
+            return snippets;
+          }
+        }
+      } catch (err) {
+        console.warn("DuckDuckGo Lite fetch failed, falling back in priority:", err);
+      }
+    } else if (engine === "duckduckgo_html") {
+      try {
+        const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(searchQuery)}&kl=in-en&df=m`;
+        const res = await fetch(url, {
+          headers: {
+            "User-Agent": userAgent,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5"
+          }
+        });
+
+        if (res.status === 200) {
+          const html = await res.text();
+          const snippets: string[] = [];
+          const regex = /<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/gi;
+          let match;
+          while ((match = regex.exec(html)) !== null && snippets.length < 5) {
+            let snippet = match[1]
+              .replace(/<[^>]*>/g, "")
+              .replace(/&amp;/g, "&")
+              .replace(/&quot;/g, '"')
+              .replace(/&#x27;/g, "'")
+              .replace(/&lt;/g, "<")
+              .replace(/&gt;/g, ">")
+              .replace(/\s+/g, " ")
+              .trim();
+            if (snippet) snippets.push(snippet);
+          }
+
+          if (snippets.length === 0) {
+            const fallbackRegex = /<div class="result__snippet"[^>]*>([\s\S]*?)<\/div>/gi;
+            while ((match = fallbackRegex.exec(html)) !== null && snippets.length < 5) {
+              let snippet = match[1]
+                .replace(/<[^>]*>/g, "")
+                .replace(/&amp;/g, "&")
+                .replace(/&quot;/g, '"')
+                .replace(/&#x27;/g, "'")
+                .replace(/\s+/g, " ")
+                .trim();
+              if (snippet) snippets.push(snippet);
+            }
+          }
+          if (snippets.length > 0) {
+            return snippets;
+          }
+        }
+      } catch (err) {
+        console.error("DuckDuckGo HTML fetch failed in priority loop:", err);
       }
     }
-  } catch (err) {
-    console.warn("Yahoo search fetch failed, falling back to DuckDuckGo:", err);
   }
 
-  // Fallback 1: DuckDuckGo Lite (if Yahoo is down/blocked)
-  try {
-    const url = `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(searchQuery)}&kl=in-en&df=m`;
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": userAgent,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5"
-      }
-    });
-
-    if (res.status === 200) {
-      const html = await res.text();
-      const snippets: string[] = [];
-      const regex = /<td class="result-snippet">([\s\S]*?)<\/td>/gi;
-      let match;
-      while ((match = regex.exec(html)) !== null && snippets.length < 5) {
-        let snippet = match[1]
-          .replace(/<[^>]*>/g, "") // strip HTML tags
-          .replace(/&amp;/g, "&")
-          .replace(/&quot;/g, '"')
-          .replace(/&#x27;/g, "'")
-          .replace(/&lt;/g, "<")
-          .replace(/&gt;/g, ">")
-          .replace(/\s+/g, " ")
-          .trim();
-        if (snippet && !snippet.includes("JavaScript is required")) {
-          snippets.push(snippet);
-        }
-      }
-      if (snippets.length > 0) {
-        return snippets;
-      }
-    }
-  } catch (err) {
-    console.warn("DuckDuckGo Lite fetch failed, falling back to HTML search:", err);
-  }
-
-  // Fallback 2: standard DuckDuckGo HTML Search
-  try {
-    const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(searchQuery)}&kl=in-en&df=m`;
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": userAgent,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5"
-      }
-    });
-
-    if (res.status === 200) {
-      const html = await res.text();
-      const snippets: string[] = [];
-      const regex = /<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/gi;
-      let match;
-      while ((match = regex.exec(html)) !== null && snippets.length < 5) {
-        let snippet = match[1]
-          .replace(/<[^>]*>/g, "")
-          .replace(/&amp;/g, "&")
-          .replace(/&quot;/g, '"')
-          .replace(/&#x27;/g, "'")
-          .replace(/&lt;/g, "<")
-          .replace(/&gt;/g, ">")
-          .replace(/\s+/g, " ")
-          .trim();
-        if (snippet) snippets.push(snippet);
-      }
-
-      if (snippets.length === 0) {
-        const fallbackRegex = /<div class="result__snippet"[^>]*>([\s\S]*?)<\/div>/gi;
-        while ((match = fallbackRegex.exec(html)) !== null && snippets.length < 5) {
-          let snippet = match[1]
-            .replace(/<[^>]*>/g, "")
-            .replace(/&amp;/g, "&")
-            .replace(/&quot;/g, '"')
-            .replace(/&#x27;/g, "'")
-            .replace(/\s+/g, " ")
-            .trim();
-          if (snippet) snippets.push(snippet);
-        }
-      }
-      return snippets;
-    }
-    return [];
-  } catch (err) {
-    console.error("DuckDuckGo HTML fetch failed:", err);
-    return [];
-  }
+  return [];
 }
 
 // Configurable timeout for LLM requests in milliseconds
@@ -356,7 +441,8 @@ async function callLLMWithRetry(
   apiKeys: any,
   agentName: string,
   onActivity: (message: string, type?: "info" | "warning" | "success") => void,
-  maxRetries = 3
+  maxRetries = 3,
+  advancedParams?: any
 ): Promise<any> {
   let attempt = 0;
   while (attempt < maxRetries) {
@@ -373,7 +459,7 @@ async function callLLMWithRetry(
       });
 
       const result = await Promise.race([
-        callLLM(provider, model, systemPrompt, userPrompt, temperature, apiKeys),
+        callLLM(provider, model, systemPrompt, userPrompt, temperature, apiKeys, advancedParams),
         timeoutPromise
       ]);
 
@@ -405,7 +491,8 @@ async function extractSearchTopics(
   targetAudience: string,
   apiKeys: any,
   agent: any,
-  onActivity?: (msg: string, type?: "info" | "warning" | "success") => void
+  onActivity?: (msg: string, type?: "info" | "warning" | "success") => void,
+  advancedParams?: any
 ): Promise<string[]> {
   try {
     const systemPrompt = "You are a LinkedIn social media trend analyst. Your job is to identify 2 to 3 broad, high-volume industry keywords or search topics on LinkedIn related to the project context. These should be general concepts likely to have active posts, rather than brand new specific names. Example: if project is 'Framer templates for builders', output broad topics like 'Framer templates', 'Web design systems', 'No-code UI'. Output a JSON object.";
@@ -422,8 +509,8 @@ Example format:
 }
 `;
     const res = onActivity
-      ? await callLLMWithRetry(agent.provider, agent.model, systemPrompt, userPrompt, 0.2, apiKeys, "Topic Extractor", onActivity)
-      : await callLLM(agent.provider, agent.model, systemPrompt, userPrompt, 0.2, apiKeys);
+      ? await callLLMWithRetry(agent.provider, agent.model, systemPrompt, userPrompt, 0.2, apiKeys, "Topic Extractor", onActivity, 3, advancedParams)
+      : await callLLM(agent.provider, agent.model, systemPrompt, userPrompt, 0.2, apiKeys, advancedParams);
 
     if (res && Array.isArray(res.topics)) {
       return res.topics.map((t: string) => t.trim()).filter(Boolean);
@@ -437,7 +524,20 @@ Example format:
 
 export async function POST(req: Request) {
   try {
-    const { appName, description, targetAudience, tone, apiKeys, agents, hookArchetype, enrichedSuccessTemplates } = await req.json();
+    const { 
+      appName, 
+      description, 
+      targetAudience, 
+      tone, 
+      apiKeys, 
+      agents, 
+      hookArchetype, 
+      enrichedSuccessTemplates,
+      customMetrics,
+      customPersonas,
+      crawlerConfig,
+      advancedParams
+    } = await req.json();
 
     if (!appName || !description) {
       return NextResponse.json(
@@ -482,7 +582,8 @@ export async function POST(req: Request) {
             targetAudience,
             apiKeys,
             agentA,
-            (msg, type) => sendEvent("activity", { message: msg, type })
+            (msg, type) => sendEvent("activity", { message: msg, type }),
+            advancedParams
           );
 
           sendEvent("status", { message: `Broad topics found: ${topics.join(", ")}. Querying viral Indian posts...` });
@@ -490,7 +591,7 @@ export async function POST(req: Request) {
 
           // Scrape search results for each topic concurrently
           const serpapiKey = apiKeys?.serpapi;
-          const scrapePromises = topics.map(topic => searchLinkedInTrends(topic, serpapiKey));
+          const scrapePromises = topics.map(topic => searchLinkedInTrends(topic, serpapiKey, crawlerConfig));
           const scrapeResultsList = await Promise.all(scrapePromises);
 
           // Combine and deduplicate snippets
@@ -538,6 +639,10 @@ Structural Analysis:
 
           // Helper to run LLM with retry & activity logs
           const runAgentCall = async (agent: any, systemPrompt: string, userPrompt: string, contextName: string) => {
+            const mergedParams = {
+              ...advancedParams,
+              temperature: agent.temperature !== undefined ? agent.temperature : advancedParams?.temperature
+            };
             return await callLLMWithRetry(
               agent.provider,
               agent.model,
@@ -548,7 +653,9 @@ Structural Analysis:
               `${agent.name} [${contextName}]`,
               (msg, type = "info") => {
                 sendEvent("activity", { message: msg, type });
-              }
+              },
+              3,
+              mergedParams
             );
           };
 
@@ -787,6 +894,25 @@ Example:
           // Step 5: Phase 4 (Consensus Settle / Synthesis)
           sendEvent("status", { message: "[Phase 4] Settle Consensus: Synthesizing the absolute best LinkedIn post." });
 
+          // Build custom metrics prompt details
+          let metricsPromptInstructions = "";
+          let metricsJsonStructure = "";
+          if (customMetrics && customMetrics.length > 0) {
+            metricsPromptInstructions = `You MUST evaluate the post against the following custom metrics:
+${customMetrics.map((m: any) => `- ${m.name} (JSON property/key: "${m.id}"): ${m.scoringInstructions}`).join("\n")}
+`;
+            const schemaFields = customMetrics.map((m: any) => `    "${m.id}": <score between 0 and 100>`).join(",\n");
+            metricsJsonStructure = `{\n  "content": "The finalized absolute best LinkedIn post content...",\n  "scores": {\n${schemaFields}\n  },\n  "synthesisRationale": "..."\n}`;
+          } else {
+            metricsPromptInstructions = `You MUST evaluate the post against the following standard metrics:
+- Hook Strength (JSON property/key: "hookStrength"): How engaging/scroll-stopping the hook is.
+- Readability (JSON property/key: "readability"): Clean flow, formatting, readability ease.
+- Credibility (JSON property/key: "credibility"): Use of proof, authentic tone, team credibility.
+- Viral Potential (JSON property/key: "viralPotential"): Engagement call and potential to spread.
+`;
+            metricsJsonStructure = `{\n  "content": "The finalized absolute best LinkedIn post content...",\n  "scores": {\n    "hookStrength": 95,\n    "readability": 88,\n    "credibility": 92,\n    "viralPotential": 98\n  },\n  "synthesisRationale": "..."\n}`;
+          }
+
           const consensusPrompt = `
 You are the Consensus Settle Panel. We have run a multi-round debate between 3 copywriter agents.
 
@@ -841,19 +967,12 @@ ${archetypeInstruction}
 7. Credibility & CTA: Always use "We built" instead of "I built". Use a non-marketing CTA (e.g., "Drop a comment and I'll DM the link").
 8. Cohesive Metaphors: Ensure there is only ONE strong metaphor. Do NOT mix metaphors.
 
+${metricsPromptInstructions}
+
 Output a JSON object with properties 'content', 'scores' (a nested object), and 'synthesisRationale'.
 
 CRITICAL FORMAT REQUIREMENT:
-{
-  "content": "The finalized absolute best LinkedIn post content...",
-  "scores": {
-    "hookStrength": 95,
-    "readability": 88,
-    "credibility": 92,
-    "viralPotential": 98
-  },
-  "synthesisRationale": "A detailed explanation of how you merged their best parts, addressed their critiques, and applied the quality checks..."
-}
+${metricsJsonStructure}
 `;
 
           let finalOutcome;
@@ -925,17 +1044,10 @@ ${auditResult.feedback.map((f: string, i: number) => `${i + 1}. ${f}`).join("\n"
 
 Please rewrite the post to fully correct all feedback items. Keep all other aspects of the post intact (such as metrics, the anchor metaphor, and the CTA strategy).
 
+${metricsPromptInstructions}
+
 Output a JSON object in the exact same format:
-{
-  "content": "The corrected, finalized absolute best LinkedIn post content...",
-  "scores": {
-    "hookStrength": 98,
-    "readability": 95,
-    "credibility": 96,
-    "viralPotential": 98
-  },
-  "synthesisRationale": "How you fixed the auditor feedback..."
-}
+${metricsJsonStructure}
                 `;
 
                 const refinedOutcome = await runAgentCall(
@@ -967,7 +1079,9 @@ Output a JSON object in the exact same format:
 
               finalOutcome.content = sanitizedContent;
               if (finalOutcome.scores) {
-                finalOutcome.scores.readability = readabilityMetrics.easeScore;
+                // Determine if we need to put readability in standard or custom key
+                const readabilityKey = (customMetrics && customMetrics.find((m: any) => m.id.toLowerCase() === "readability")) ? customMetrics.find((m: any) => m.id.toLowerCase() === "readability").id : "readability";
+                finalOutcome.scores[readabilityKey] = readabilityMetrics.easeScore;
               }
             } catch (fmtErr: any) {
               console.error("Formatting sanitization failed:", fmtErr);
@@ -978,8 +1092,20 @@ Output a JSON object in the exact same format:
               sendEvent("status", { message: "[A/B Panel] Simulating response of target audience focus group..." });
               sendEvent("activity", { message: "[A/B Panel] Evaluating scroll stopping, commenting likelihood, and virality sharing indices...", type: "info" });
 
+              let personasPromptList = "";
+              if (customPersonas && customPersonas.length > 0) {
+                personasPromptList = customPersonas.map((p: any, idx: number) => {
+                  return `${idx + 1}. "${p.name}" (${p.avatar || "👤"}) - ${p.description} (Comment Ratio Modifier: ${p.commentRatio}%)`;
+                }).join("\n");
+              } else {
+                personasPromptList = `1. "Skeptical CTO" (🛡️) - Values deep architecture details, concrete benchmarks, security integrity, and zero cloud-lockout egress.
+2. "Hustling Solopreneur" (⚡) - Values speed to build, automation efficiency, direct revenue/business growth, and simple tooling.
+3. "Metrics-Driven VC" (📈) - Values market size disruption, high product velocity metrics, team scale, and competitive moats.
+4. "Developer Advocate" (💡) - Values great developer experience (DX), open-source accessibility, local-first setups, and clear templates.`;
+              }
+
               const personasEvalPrompt = `
-You are the Target Audience Focus Group. Evaluate this synthesized LinkedIn post from the perspective of 4 distinct professional profiles:
+You are the Target Audience Focus Group. Evaluate this synthesized LinkedIn post from the perspective of target audience professional profiles:
 
 POST TO EVALUATE:
 ---
@@ -987,10 +1113,7 @@ ${finalOutcome.content}
 ---
 
 TARGET PERSONAS:
-1. "Skeptical CTO" (🛡️) - Values deep architecture details, concrete benchmarks, security integrity, and zero cloud-lockout egress.
-2. "Hustling Solopreneur" (⚡) - Values speed to build, automation efficiency, direct revenue/business growth, and simple tooling.
-3. "Metrics-Driven VC" (📈) - Values market size disruption, high product velocity metrics, team scale, and competitive moats.
-4. "Developer Advocate" (💡) - Values great developer experience (DX), open-source accessibility, local-first setups, and clear templates.
+${personasPromptList}
 
 For each persona, output:
 - name: The exact persona name.
@@ -1043,14 +1166,22 @@ Example:
               { name: agentB.name, ...refinedB },
               { name: agentC.name, ...refinedC }
             ].sort((a, b) => b.score - a.score);
+
+            const fallbackScores: Record<string, number> = {};
+            if (customMetrics && customMetrics.length > 0) {
+              customMetrics.forEach((m: any) => {
+                fallbackScores[m.id] = sorted[0].score;
+              });
+            } else {
+              fallbackScores.hookStrength = sorted[0].score;
+              fallbackScores.readability = sorted[0].score;
+              fallbackScores.credibility = sorted[0].score;
+              fallbackScores.viralPotential = sorted[0].score;
+            }
+
             finalOutcome = {
               content: sorted[0].content,
-              scores: {
-                hookStrength: sorted[0].score,
-                readability: sorted[0].score,
-                credibility: sorted[0].score,
-                viralPotential: sorted[0].score
-              },
+              scores: fallbackScores,
               synthesisRationale: `Consensus synthesis failed (${e.message}). Fell back to the highest scoring refined draft.`
             };
           }

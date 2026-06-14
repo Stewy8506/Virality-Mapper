@@ -51,12 +51,7 @@ interface GenerationResult {
   best: {
     style: string;
     content: string;
-    scores?: {
-      hookStrength: number;
-      readability: number;
-      credibility: number;
-      viralPotential: number;
-    };
+    scores?: Record<string, number>;
     score?: number; // legacy
     critique: string;
   };
@@ -109,6 +104,63 @@ interface UserPreferences {
   defaultHookArchetype: string;
   fontSize: number;
   enableRAG: boolean;
+  customFontUrl?: string;
+  customFontFamily?: string;
+}
+
+interface CustomModel {
+  id: string;
+  name: string;
+  provider: string;
+  contextLength?: number;
+  maxOutputTokens?: number;
+}
+
+interface CustomMetric {
+  id: string;
+  name: string;
+  weight: number;
+  scoringInstructions: string;
+}
+
+interface CustomPersona {
+  id: string;
+  name: string;
+  avatar: string;
+  description: string;
+  commentRatio: number;
+}
+
+interface CrawlerConfig {
+  enginePriority: string[];
+  targetYear: number;
+  serpapiEnabled: boolean;
+}
+
+interface AdvancedParams {
+  temperature: number;
+  topP: number;
+  topK: number;
+  presencePenalty: number;
+  frequencyPenalty: number;
+  seed: number;
+  stopSequences: string;
+}
+
+interface MasterConfig {
+  version: number;
+  apiKeys: ApiKeys;
+  preferences: UserPreferences & {
+    theme: string;
+    font: string;
+    showTransitions: boolean;
+  };
+  agents: Agent[];
+  customModels: CustomModel[];
+  customMetrics: CustomMetric[];
+  customPersonas: CustomPersona[];
+  crawlerConfig: CrawlerConfig;
+  advancedParams: AdvancedParams;
 }
 
 export default function PostGeneratorForm({
@@ -119,6 +171,7 @@ export default function PostGeneratorForm({
   formData,
   setFormData,
   preferences,
+  masterConfig,
 }: {
   agents: Agent[];
   apiKeys: ApiKeys;
@@ -140,6 +193,7 @@ export default function PostGeneratorForm({
     hookArchetype: string;
   }>>;
   preferences: UserPreferences;
+  masterConfig: MasterConfig;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -443,6 +497,10 @@ export default function PostGeneratorForm({
           apiKeys,
           agents,
           enrichedSuccessTemplates,
+          customMetrics: masterConfig.customMetrics,
+          customPersonas: masterConfig.customPersonas,
+          crawlerConfig: masterConfig.crawlerConfig,
+          advancedParams: masterConfig.advancedParams,
         }),
       });
 

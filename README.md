@@ -70,19 +70,23 @@ The 3 refined drafts, their critique histories, and self-change arguments are co
 
 ## ✨ Key Features
 
-- **Typographic & Minimalist Entry Page**: A root landing page built in [app/page.tsx](file:///Users/anv./Documents/Virality%20Mapper/app/page.tsx) with elegant micro-animations (Framer Motion and CSS transitions), visual A/B Raw vs Consensus comparisons, and ruled layout guides.
+- **OpenWebUI-Style Customizable Settings Console**: Restructured into 8 tabs for complete workspace customization (API Connections, Model Registry, Hyperparameters, Critique Metrics, Focus Personas, Grounding Scrapers, UI Styling, Admin Console) via [components/SettingsModal.tsx](file:///Users/anv./Documents/Virality%20Mapper/components/SettingsModal.tsx).
+- **Dynamic Model & Connections Registry**: Register custom endpoints (Ollama, LM Studio, custom base URLs, custom headers, and API keys) and map individual models. Registered models automatically populate in specialist agent dropdowns in [components/AgentPlayground.tsx](file:///Users/anv./Documents/Virality%20Mapper/components/AgentPlayground.tsx).
+- **Advanced Hyperparameter Sliders**: Fine-tune global LLM parameters: Temperature (0.0 to 2.0), Top-P, Top-K, Presence and Frequency penalties, deterministic seed, and stop sequences.
+- **Custom Critique Metrics & Dynamic Scoring**: Create, edit, and delete evaluation axes. Direct grading instructions are sent to LLM agents dynamically to audit drafts, and scores are rendered visually via progress indicators in [components/ResultsDisplay.tsx](file:///Users/anv./Documents/Virality%20Mapper/components/ResultsDisplay.tsx).
+- **Simulated Focus Group Persona Customizer**: Define and edit audience simulators with custom bios, avatars, and commenting ratios to evaluate posts dynamically in the A/B focus group panel.
+- **Visual Typography & Custom Web Fonts**: Choose between Geist, Inter, Outfit, Plus Jakarta Sans, Fira Code, or load any external Google Font dynamically using font stylesheet URLs and CSS family names.
+- **Config backups & फैक्ट्री resets**: Export a full JSON config file, import configuration files with validation, or run a factory reset to wipe local browser cache.
 - **Live & Organic Search Grounding**: Automatically extracts real-time professional hooks and trending structures from LinkedIn posts via a multi-engine scraper pipeline (Yahoo Search primary, DuckDuckGo Lite & HTML fallbacks) with monthly recency filters. If a **SerpApi key** is configured, queries Google Search organically with monthly filters (`tbs=qdr:m`) to bypass scrapers.
 - **Neuromarketing Hook Archetypes**: Select dropdown to target specific copywriting angles: *Contrarian Interrupt* (shock & debunk), *Vulnerable Disclosure* (failure & trust), *High-Value Stash* (resources & curation), and *Threat & Fear* (operational risk).
-- **AI Target Audience Focus Group**: Runs simulated reviews across 4 professional profiles to audit and score scroll-stopping, commenting probability, and virality share rates before final publication.
 - **Self-Improving RAG Analytics Loop**: Record actual views, likes, and comments for published posts in the Archive pane. The system automatically extracts these success stories and prepends them as top-priority few-shot reference templates for future generations.
-- **Multi-Axis Scoring System**: Receives 4-axis performance metrics (Hook Strength, Readability, Credibility, Viral Potential) for the final consolidated post, rendered through visual score meters in [components/ResultsDisplay.tsx](file:///Users/anv./Documents/Virality%20Mapper/components/ResultsDisplay.tsx).
-- **Persistent Credentials & Configurations**: All LLM API keys (`vm_api_keys`) and agent settings (`vm_agents_config`) are saved locally in the browser's `localStorage` via [components/SettingsTab.tsx](file:///Users/anv./Documents/Virality%20Mapper/components/SettingsTab.tsx) and [app/workspace/page.tsx](file:///Users/anv./Documents/Virality%20Mapper/app/workspace/page.tsx). No keys are reset or wiped on page refresh, and no credentials ever touch a database.
 - **Configurable LLM Timeouts**: Adjust standard API timeouts (default 30 seconds) via the `LLM_TIMEOUT_MS` constant in [app/api/generate/route.ts](file:///Users/anv./Documents/Virality%20Mapper/app/api/generate/route.ts).
 - **Interactive Archive Viewer**: Save generation runs to local storage, review previous runs, navigate critique logs, and inspect agent score sheets in a split-pane interface in [components/PostGeneratorForm.tsx](file:///Users/anv./Documents/Virality%20Mapper/components/PostGeneratorForm.tsx).
 - **Stable Tab State Memory**: Navigating between Workspace, Settings, and Agents tabs keeps the current generation state, active stream readers, and typewriter animations running smoothly in the background without unmounting.
 - **Monospace Console & Stopwatch Logs**: Real-time logs panel showing crawler actions, model requests, and backoff retries, alongside a live Stopwatch tracking generation duration.
 - **Flexible Provider Integrations**: Out-of-the-box support for Google Gemini, OpenAI, Anthropic, OpenRouter, local models (Ollama, LM Studio), and custom API proxies.
 - **Premium UI/UX Design**: Modern, glassmorphic dark-theme design featuring premium typography (Google Fonts Inter/Outfit), subtle hover effects, responsive layout grids, and smooth scrolling powered by `lenis` and [components/LenisProvider.tsx](file:///Users/anv./Documents/Virality%20Mapper/components/LenisProvider.tsx).
+- **Persistent Credentials & Configurations**: All configurations, API connections, agent templates, custom metrics, and history logs are serialized into a master `vm_master_config` state in `localStorage` in a backward-compatible format. No data is reset on refresh, and no credentials ever touch a database.
 
 ---
 
@@ -119,7 +123,9 @@ The 3 refined drafts, their critique histories, and self-change arguments are co
 
 ## 🧠 Workspace Guide
 
-1. **Setup Credentials**: Go to the **Settings** tab and enter your LLM API keys. Use the **Test Connection** button to query available models from each provider and verify connection stability.
-2. **Configure Copywriters**: Use the **Agent Playground** tab to fine-tune copywriter temperatures, change models, or update core copywriter system prompts.
-3. **Execute the Arena**: In the **Workspace** tab, fill out your project details (name, description, target audience, tone) and click **Run 3-Agent Debate Arena**.
-4. **Inspect & Tweak**: Track the live logs and watch the workspace compile initial drafts, peer review cards, refined drafts, and the final synthesized copy. Copy the consolidated copy-ready master post directly from the workspace!
+1. **Setup Connections & Model Registry**: Go to the settings drawer (`Settings` button) and configure your LLM provider keys. Under **Model Registry**, you can register local models (Ollama, LM Studio) or custom proxies. Registered models automatically populate in specialist agent dropdowns.
+2. **Tune Hyperparameters & Metrics**: Set global parameters (temperature, topP, topK, presence/frequency penalties, seeds, stop sequences) under **Hyperparameters**. Create or edit dynamic critique metrics under **Critique Metrics** and target focus group simulators under **Focus Personas**.
+3. **Configure specialist writers**: In the **Specialist Agents** tab, fine-tune the prompts, temperatures, and model choices for the three debate agents (Alpha, Beta, Gamma).
+4. **Execute the debate arena**: In the **Workspace** tab, fill out your project details (name, description, target audience, tone), select a copywriting Hook Archetype (organic, contrarian, vulnerable, value-stash, threat-fear), and click **Run 3-Agent Copywriting Debate**.
+5. **Inspect logs & settle output**: Watch live scrapers and LLM routing logs via the real-time HUD terminal. View drafts, critiques, and refinements sequentially. Copy the finalized consolidated post graded dynamically against your custom metrics axes, and preview the desktop LinkedIn feed or target focus group simulations.
+6. **Export & backups**: Back up your configurations, models, critique criteria, and personas under the **Admin Console** tab using **Export JSON Backup**. Restore them on any device using **Import JSON Backup** or clear cache using **Factory Reset**.

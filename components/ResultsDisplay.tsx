@@ -30,12 +30,7 @@ interface GenerationResult {
   best: {
     style: string;
     content: string;
-    scores?: {
-      hookStrength: number;
-      readability: number;
-      credibility: number;
-      viralPotential: number;
-    };
+    scores?: Record<string, number>;
     score?: number;
     critique: string;
     personas?: Array<{
@@ -59,6 +54,8 @@ interface UserPreferences {
   defaultHookArchetype: string;
   fontSize: number;
   enableRAG: boolean;
+  customFontUrl?: string;
+  customFontFamily?: string;
 }
 
 // Reusable Typographic Progress Bar Indicator
@@ -76,17 +73,43 @@ function ScoreProgressBar({ label, score }: { label: string; score: number }) {
   );
 }
 
+interface CustomMetric {
+  id: string;
+  name: string;
+  weight: number;
+  scoringInstructions: string;
+}
+
 export default function ResultsDisplay({
   result,
   preferences,
+  customMetrics = [],
 }: {
   result: GenerationResult;
   preferences: UserPreferences;
+  customMetrics?: CustomMetric[];
 }) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [arenaTab, setArenaTab] = useState<"drafts" | "critiques" | "refinements">("drafts");
   const [previewMode, setPreviewMode] = useState<"editor" | "linkedin">("editor");
   const [expandedLinkedIn, setExpandedLinkedIn] = useState(false);
+
+  const getSettleScore = () => {
+    if (!result.best.scores) return result.best.score || 95;
+    if (customMetrics.length === 0) return result.best.scores.viralPotential || result.best.score || 95;
+    
+    let totalScore = 0;
+    let totalWeight = 0;
+    customMetrics.forEach((m) => {
+      const scoresObj = result.best.scores as Record<string, number>;
+      const val = scoresObj[m.id] ?? scoresObj[m.id.toLowerCase()];
+      if (val !== undefined) {
+        totalScore += val * m.weight;
+        totalWeight += m.weight;
+      }
+    });
+    return totalWeight > 0 ? Math.round(totalScore / totalWeight) : (result.best.score || 95);
+  };
 
   // Auto-copy clipboard logic
   useEffect(() => {
@@ -187,7 +210,7 @@ export default function ResultsDisplay({
 
               <div className="flex items-center gap-4 text-xs font-semibold text-zinc-400 font-mono">
                 <div className="flex items-center gap-1">
-                  <Zap size={12} className="text-amber-400" /> Viral Potential: {result.best.scores?.viralPotential || result.best.score || 95}/100
+                  <Zap size={12} className="text-amber-400" /> {customMetrics.length > 0 ? "Settle Score" : "Viral Potential"}: {getSettleScore()}/100
                 </div>
                 <div className={`flex items-center gap-1 ${isOverLimit ? "text-rose-400" : "text-emerald-400"}`}>
                   <span>{charCount}</span>
@@ -308,9 +331,25 @@ export default function ResultsDisplay({
               
               {result.best.scores && (
                 <div className="flex flex-col gap-4 mt-3 pt-3" style={{ borderTop: "1px solid var(--border-muted)" }}>
-                  <ScoreProgressBar label="Hook Strength" score={result.best.scores.hookStrength} />
-                  <ScoreProgressBar label="Readability" score={result.best.scores.readability} />
-                  <ScoreProgressBar label="Credibility" score={result.best.scores.credibility} />
+                  {customMetrics.length > 0 ? (
+                    customMetrics.map((metric) => {
+                      const scoresObj = result.best.scores as Record<string, number>;
+                      const score = scoresObj[metric.id] ?? scoresObj[metric.id.toLowerCase()];
+                      return (
+                        <ScoreProgressBar
+                          key={metric.id}
+                          label={metric.name}
+                          score={score !== undefined ? score : 0}
+                        />
+                      );
+                    })
+                  ) : (
+                    <>
+                      <ScoreProgressBar label="Hook Strength" score={result.best.scores.hookStrength} />
+                      <ScoreProgressBar label="Readability" score={result.best.scores.readability} />
+                      <ScoreProgressBar label="Credibility" score={result.best.scores.credibility} />
+                    </>
+                  )}
                 </div>
               )}
             </div>

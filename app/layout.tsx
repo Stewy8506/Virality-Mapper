@@ -42,6 +42,28 @@ export default function RootLayout({
                   const font = localStorage.getItem("font") || "geist";
                   document.documentElement.setAttribute("data-font", font);
 
+                  if (font === "fira") {
+                    const link = document.createElement("link");
+                    link.rel = "stylesheet";
+                    link.href = "https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&display=swap";
+                    document.head.appendChild(link);
+                  } else if (font === "custom") {
+                    const storedConfig = localStorage.getItem("vm_master_config");
+                    if (storedConfig) {
+                      const parsed = JSON.parse(storedConfig);
+                      if (parsed && parsed.preferences && parsed.preferences.customFontUrl) {
+                        const link = document.createElement("link");
+                        link.rel = "stylesheet";
+                        link.href = parsed.preferences.customFontUrl;
+                        document.head.appendChild(link);
+                        
+                        if (parsed.preferences.customFontFamily) {
+                          document.documentElement.style.setProperty("--font-custom-family", parsed.preferences.customFontFamily);
+                        }
+                      }
+                    }
+                  }
+
                   const customCss = localStorage.getItem("custom_css");
                   if (customCss) {
                     const style = document.createElement("style");

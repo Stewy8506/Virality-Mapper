@@ -19,7 +19,139 @@ interface UserPreferences {
   defaultHookArchetype: string;
   fontSize: number;
   enableRAG: boolean;
+  customFontUrl?: string;
+  customFontFamily?: string;
 }
+
+interface CustomModel {
+  id: string;
+  name: string;
+  provider: string;
+  contextLength?: number;
+  maxOutputTokens?: number;
+}
+
+interface CustomMetric {
+  id: string;
+  name: string;
+  weight: number;
+  scoringInstructions: string;
+}
+
+interface CustomPersona {
+  id: string;
+  name: string;
+  avatar: string;
+  description: string;
+  commentRatio: number;
+}
+
+interface CrawlerConfig {
+  enginePriority: string[];
+  targetYear: number;
+  serpapiEnabled: boolean;
+}
+
+interface AdvancedParams {
+  temperature: number;
+  topP: number;
+  topK: number;
+  presencePenalty: number;
+  frequencyPenalty: number;
+  seed: number;
+  stopSequences: string;
+}
+
+interface ApiKeys {
+  gemini: string;
+  openai: string;
+  anthropic: string;
+  openrouter: string;
+  ollamaUrl: string;
+  lmStudioUrl: string;
+  customBaseUrl: string;
+  customApiKey: string;
+  serpapi: string;
+}
+
+interface MasterConfig {
+  version: number;
+  apiKeys: ApiKeys;
+  preferences: UserPreferences & {
+    theme: string;
+    font: string;
+    showTransitions: boolean;
+  };
+  agents: Agent[];
+  customModels: CustomModel[];
+  customMetrics: CustomMetric[];
+  customPersonas: CustomPersona[];
+  crawlerConfig: CrawlerConfig;
+  advancedParams: AdvancedParams;
+}
+
+interface Agent {
+  id: string;
+  name: string;
+  provider: string;
+  model: string;
+  systemPrompt: string;
+  temperature: number;
+  enabled: boolean;
+}
+
+const DEFAULT_CUSTOM_MODELS: CustomModel[] = [
+  { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", provider: "gemini", contextLength: 1048576, maxOutputTokens: 8192 },
+  { id: "gpt-4o-mini", name: "GPT-4o Mini", provider: "openai", contextLength: 128000, maxOutputTokens: 16384 },
+  { id: "claude-3-5-haiku-latest", name: "Claude 3.5 Haiku", provider: "anthropic", contextLength: 200000, maxOutputTokens: 8192 }
+];
+
+const DEFAULT_CUSTOM_METRICS: CustomMetric[] = [
+  { id: "hookStrength", name: "Hook Strength", weight: 25, scoringInstructions: "Evaluate the hook's ability to stop the scroll, disrupt pattern, and appeal to the target audience. Output score 0-100." },
+  { id: "readability", name: "Readability", weight: 25, scoringInstructions: "Evaluate formatting, line spacing, sentence structure, and clarity for mobile scrolling. Output score 0-100." },
+  { id: "credibility", name: "Credibility", weight: 25, scoringInstructions: "Evaluate the authority, actions, real metrics bridging, and trust factor. Output score 0-100." },
+  { id: "viralPotential", name: "Viral Potential", weight: 25, scoringInstructions: "Evaluate shareability, commentary triggers, polar hot take relevance, and CTA effectiveness. Output score 0-100." }
+];
+
+const DEFAULT_CUSTOM_PERSONAS: CustomPersona[] = [
+  { id: "cto", name: "Skeptical CTO", avatar: "🛡️", description: "Values deep architecture details, concrete benchmarks, security integrity, and zero cloud-lockout egress.", commentRatio: 40 },
+  { id: "solopreneur", name: "Hustling Solopreneur", avatar: "⚡", description: "Values speed to build, automation efficiency, direct revenue/business growth, and simple tooling.", commentRatio: 75 },
+  { id: "vc", name: "Metrics-Driven VC", avatar: "📈", description: "Values market size disruption, high product velocity metrics, team scale, and competitive moats.", commentRatio: 30 },
+  { id: "devadvocate", name: "Developer Advocate", avatar: "💡", description: "Values great developer experience (DX), open-source accessibility, local-first setups, and clear templates.", commentRatio: 60 }
+];
+
+const DEFAULT_CRAWLER_CONFIG: CrawlerConfig = {
+  enginePriority: ["yahoo", "duckduckgo_lite", "duckduckgo_html"],
+  targetYear: 2026,
+  serpapiEnabled: true
+};
+
+const DEFAULT_ADVANCED_PARAMS: AdvancedParams = {
+  temperature: 0.7,
+  topP: 0.9,
+  topK: 40,
+  presencePenalty: 0.0,
+  frequencyPenalty: 0.0,
+  seed: 42,
+  stopSequences: ""
+};
+
+const DEFAULT_MASTER_CONFIG = (legacyKeys: ApiKeys, legacyPrefs: UserPreferences, legacyAgents: Agent[]): MasterConfig => ({
+  version: 1,
+  apiKeys: legacyKeys,
+  preferences: {
+    ...legacyPrefs,
+    theme: typeof window !== "undefined" ? localStorage.getItem("theme") || "obsidian" : "obsidian",
+    font: typeof window !== "undefined" ? localStorage.getItem("font") || "geist" : "geist",
+    showTransitions: true
+  },
+  agents: legacyAgents,
+  customModels: DEFAULT_CUSTOM_MODELS,
+  customMetrics: DEFAULT_CUSTOM_METRICS,
+  customPersonas: DEFAULT_CUSTOM_PERSONAS,
+  crawlerConfig: DEFAULT_CRAWLER_CONFIG,
+  advancedParams: DEFAULT_ADVANCED_PARAMS
+});
 
 interface GenerationResult {
   trends: string[];
@@ -47,37 +179,10 @@ interface GenerationResult {
   best: {
     style: string;
     content: string;
-    scores?: {
-      hookStrength: number;
-      readability: number;
-      credibility: number;
-      viralPotential: number;
-    };
+    scores?: Record<string, number>;
     score?: number; // legacy
     critique: string;
   };
-}
-
-interface Agent {
-  id: string;
-  name: string;
-  provider: string;
-  model: string;
-  systemPrompt: string;
-  temperature: number;
-  enabled: boolean;
-}
-
-interface ApiKeys {
-  gemini: string;
-  openai: string;
-  anthropic: string;
-  openrouter: string;
-  ollamaUrl: string;
-  lmStudioUrl: string;
-  customBaseUrl: string;
-  customApiKey: string;
-  serpapi: string;
 }
 
 interface ArchivedPost {
@@ -156,16 +261,56 @@ export default function WorkspacePage() {
     return false;
   });
 
-  const [preferences, setPreferences] = useState<UserPreferences>(() => {
+  const [masterConfig, setMasterConfig] = useState<MasterConfig>(() => {
     if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("vm_user_preferences");
+      const stored = localStorage.getItem("vm_master_config");
       if (stored) {
         try {
-          return JSON.parse(stored);
+          const parsed = JSON.parse(stored);
+          if (parsed && parsed.version === 1) {
+            return parsed;
+          }
         } catch { }
       }
+
+      // Fallback migration of legacy keys
+      let legacyKeys = DEFAULT_KEYS;
+      try {
+        const storedKeys = localStorage.getItem("vm_api_keys");
+        if (storedKeys) legacyKeys = JSON.parse(storedKeys);
+      } catch {}
+
+      let legacyPrefs = {
+        linkedinName: "AI Copywriter Agent Network",
+        linkedinHeadline: "Synthesized via Virality Settle Engine",
+        linkedinAvatar: "💡",
+        layoutDensity: "cozy" as const,
+        sidebarPosition: "left" as const,
+        autoCopyToClipboard: false,
+        defaultHookArchetype: "organic",
+        fontSize: 14,
+        enableRAG: true,
+      };
+      try {
+        const storedPrefs = localStorage.getItem("vm_user_preferences");
+        if (storedPrefs) legacyPrefs = JSON.parse(storedPrefs);
+      } catch {}
+
+      let legacyAgents = DEFAULT_AGENTS;
+      try {
+        const storedAgents = localStorage.getItem("vm_agents_config");
+        if (storedAgents) {
+          const parsed = JSON.parse(storedAgents);
+          if (Array.isArray(parsed) && parsed.length >= 3) legacyAgents = parsed;
+        }
+      } catch {}
+
+      const config = DEFAULT_MASTER_CONFIG(legacyKeys, legacyPrefs, legacyAgents);
+      localStorage.setItem("vm_master_config", JSON.stringify(config));
+      return config;
     }
-    return {
+
+    return DEFAULT_MASTER_CONFIG(DEFAULT_KEYS, {
       linkedinName: "AI Copywriter Agent Network",
       linkedinHeadline: "Synthesized via Virality Settle Engine",
       linkedinAvatar: "💡",
@@ -175,13 +320,12 @@ export default function WorkspacePage() {
       defaultHookArchetype: "organic",
       fontSize: 14,
       enableRAG: true,
-    };
+    }, DEFAULT_AGENTS);
   });
 
-  const updatePreferences = (newPrefs: UserPreferences) => {
-    setPreferences(newPrefs);
-    localStorage.setItem("vm_user_preferences", JSON.stringify(newPrefs));
-  };
+  const apiKeys = masterConfig.apiKeys;
+  const preferences = masterConfig.preferences;
+  const agents = masterConfig.agents;
 
   const [customCss, setCustomCss] = useState(() => {
     if (typeof window !== "undefined") {
@@ -196,31 +340,6 @@ export default function WorkspacePage() {
     targetAudience: "",
     tone: "Professional, punchy, engaging",
     hookArchetype: "organic",
-  });
-
-  const [apiKeys, setApiKeys] = useState<ApiKeys>(() => {
-    if (typeof window !== "undefined") {
-      const keysData = localStorage.getItem("vm_api_keys");
-      if (keysData) {
-        try { return JSON.parse(keysData); } catch { }
-      }
-    }
-    return DEFAULT_KEYS;
-  });
-
-  const [agents, setAgents] = useState<Agent[]>(() => {
-    if (typeof window !== "undefined") {
-      const agentsData = localStorage.getItem("vm_agents_config");
-      if (agentsData) {
-        try {
-          const parsed = JSON.parse(agentsData);
-          if (Array.isArray(parsed) && parsed.length >= 3) {
-            return parsed;
-          }
-        } catch { }
-      }
-    }
-    return DEFAULT_AGENTS;
   });
 
   const [result, setResult] = useState<GenerationResult | null>(null);
@@ -283,6 +402,44 @@ export default function WorkspacePage() {
     }
   }, [preferences.layoutDensity]);
 
+  // Load dynamic font stylesheet at runtime
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    // Remove old dynamic font elements
+    const oldLink = document.getElementById("dynamic-custom-font-link");
+    if (oldLink) oldLink.remove();
+
+    const font = preferences.font;
+    if (font === "fira") {
+      const link = document.createElement("link");
+      link.id = "dynamic-custom-font-link";
+      link.rel = "stylesheet";
+      link.href = "https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&display=swap";
+      document.head.appendChild(link);
+      document.documentElement.setAttribute("data-font", "fira");
+      localStorage.setItem("font", "fira");
+    } else if (font === "custom") {
+      document.documentElement.setAttribute("data-font", "custom");
+      localStorage.setItem("font", "custom");
+      if (preferences.customFontUrl && preferences.customFontUrl.startsWith("http")) {
+        const link = document.createElement("link");
+        link.id = "dynamic-custom-font-link";
+        link.rel = "stylesheet";
+        link.href = preferences.customFontUrl;
+        document.head.appendChild(link);
+      }
+      if (preferences.customFontFamily) {
+        document.documentElement.style.setProperty("--font-custom-family", preferences.customFontFamily);
+      } else {
+        document.documentElement.style.removeProperty("--font-custom-family");
+      }
+    } else {
+      document.documentElement.setAttribute("data-font", font);
+      localStorage.setItem("font", font);
+    }
+  }, [preferences.font, preferences.customFontUrl, preferences.customFontFamily]);
+
   const handleSaveCustomCss = (css: string) => {
     setCustomCss(css);
     localStorage.setItem("custom_css", css);
@@ -292,14 +449,14 @@ export default function WorkspacePage() {
     }
   };
 
-  const updateApiKeys = (newKeys: ApiKeys) => {
-    setApiKeys(newKeys);
-    localStorage.setItem("vm_api_keys", JSON.stringify(newKeys));
-  };
+
 
   const updateAgents = (newAgents: Agent[]) => {
-    setAgents(newAgents);
-    localStorage.setItem("vm_agents_config", JSON.stringify(newAgents));
+    setMasterConfig(prev => {
+      const next = { ...prev, agents: newAgents };
+      localStorage.setItem("vm_master_config", JSON.stringify(next));
+      return next;
+    });
   };
 
   const handleToggleAgent = (id: string) => {
@@ -968,8 +1125,15 @@ export default function WorkspacePage() {
                   formData={editorFormData}
                   setFormData={setEditorFormData}
                   preferences={preferences}
+                  masterConfig={masterConfig}
                 />
-                {result && <ResultsDisplay result={result} preferences={preferences} />}
+                {result && (
+                  <ResultsDisplay
+                    result={result}
+                    preferences={preferences}
+                    customMetrics={masterConfig.customMetrics}
+                  />
+                )}
               </motion.div>
             )}
 
@@ -989,6 +1153,7 @@ export default function WorkspacePage() {
                   onResetAgents={() => {
                     updateAgents(DEFAULT_AGENTS);
                   }}
+                  customModels={masterConfig.customModels}
                 />
               </motion.div>
             )}
@@ -1001,12 +1166,13 @@ export default function WorkspacePage() {
         <SettingsModal
           isOpen={isSettingsOpen}
           onClose={() => setIsSettingsOpen(false)}
-          apiKeys={apiKeys}
-          onSaveKeys={updateApiKeys}
+          masterConfig={masterConfig}
+          onSaveConfig={(newConfig) => {
+            setMasterConfig(newConfig);
+            localStorage.setItem("vm_master_config", JSON.stringify(newConfig));
+          }}
           customCss={customCss}
           onSaveCustomCss={handleSaveCustomCss}
-          preferences={preferences}
-          onSavePreferences={updatePreferences}
         />
       )}
     </div>
