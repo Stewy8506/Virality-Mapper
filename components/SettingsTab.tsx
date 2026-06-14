@@ -34,7 +34,9 @@ export default function SettingsTab({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setKeys(prev => ({ ...prev, [name]: value }));
+    const newKeys = { ...keys, [name]: value };
+    setKeys(newKeys);
+    onSave(newKeys);
   };
 
   const toggleShowKey = (field: string) => {

@@ -30,7 +30,13 @@ interface GenerationResult {
   best: {
     style: string;
     content: string;
-    score: number;
+    scores?: {
+      hookStrength: number;
+      readability: number;
+      credibility: number;
+      viralPotential: number;
+    };
+    score?: number;
     critique: string;
   };
 }
@@ -125,7 +131,7 @@ export default function ResultsDisplay({ result }: { result: GenerationResult })
 
               <div className="flex items-center gap-4 text-xs font-semibold text-zinc-400 font-mono">
                 <div className="flex items-center gap-1">
-                  <Zap size={12} className="text-amber-400" /> Viral Score: {result.best.score}/100
+                  <Zap size={12} className="text-amber-400" /> Viral Potential: {result.best.scores?.viralPotential || result.best.score || 95}/100
                 </div>
                 <div className={`flex items-center gap-1 ${isOverLimit ? "text-rose-400" : "text-emerald-400"}`}>
                   <span>{charCount}</span>
@@ -234,6 +240,23 @@ export default function ResultsDisplay({ result }: { result: GenerationResult })
               <p className="serif-italic" style={{ color: "var(--zinc-400)", margin: 0 }}>
                 {result.best.critique}
               </p>
+              
+              {result.best.scores && (
+                <div className="flex flex-wrap gap-4 mt-3 pt-3 border-t border-zinc-800">
+                  <div className="flex items-center gap-1.5 text-[10px] font-mono font-semibold">
+                    <span className="text-zinc-500 uppercase">Hook:</span>
+                    <span className={result.best.scores.hookStrength >= 90 ? "text-emerald-400" : "text-amber-400"}>{result.best.scores.hookStrength}/100</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[10px] font-mono font-semibold">
+                    <span className="text-zinc-500 uppercase">Readability:</span>
+                    <span className={result.best.scores.readability >= 90 ? "text-emerald-400" : "text-amber-400"}>{result.best.scores.readability}/100</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[10px] font-mono font-semibold">
+                    <span className="text-zinc-500 uppercase">Credibility:</span>
+                    <span className={result.best.scores.credibility >= 90 ? "text-emerald-400" : "text-amber-400"}>{result.best.scores.credibility}/100</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

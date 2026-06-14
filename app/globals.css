@@ -111,7 +111,7 @@ body::after {
 /* Titles */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
-  font-weight: 600; /* Medium-semibold sleek weight */
+  font-weight: 500; /* Reduced weight for cleaner look */
   letter-spacing: -0.02em;
   color: white;
 }
@@ -150,7 +150,7 @@ h1, h2, h3, h4, h5, h6 {
 .brand-text {
   font-family: var(--font-heading);
   font-size: 1.15rem;
-  font-weight: 700; /* Sleek bold instead of 800 */
+  font-weight: 500; /* Sleek medium weight */
   letter-spacing: -0.03em;
   display: flex;
   align-items: center;

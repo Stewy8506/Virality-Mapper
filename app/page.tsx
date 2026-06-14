@@ -34,7 +34,13 @@ interface GenerationResult {
   best: {
     style: string;
     content: string;
-    score: number;
+    scores?: {
+      hookStrength: number;
+      readability: number;
+      credibility: number;
+      viralPotential: number;
+    };
+    score?: number; // legacy
     critique: string;
   };
 }
@@ -66,7 +72,7 @@ const DEFAULT_AGENTS: Agent[] = [
     name: "Agent Alpha (Hook & Structure)",
     provider: "gemini",
     model: "gemini-2.5-flash",
-    systemPrompt: "You are Agent Alpha, a LinkedIn growth expert specializing in scroll-stopping pattern-interrupt hooks, crisp visual spacing, compelling readability formatting, and polarizing engagement triggers. Your goal is to maximize CTR. Always end the post EXACTLY with this hot take verbatim: 'Hot take: Relying on cloud tools for sensitive IP visualization is an unacceptable security gamble. Agree or disagree?'. DO NOT use marketing fluff like 'digital abyss'. Start EXACTLY mid-thought with relatable developer fears (e.g., 'If I touch this file, what breaks?'). Include 'hope-driven development' in the hook. Keep the total post under 1200 characters.",
+    systemPrompt: "You are Agent Alpha, a LinkedIn growth expert specializing in scroll-stopping pattern-interrupt hooks, crisp visual spacing, compelling readability formatting, and polarizing engagement triggers. Your goal is to maximize CTR. Always end the post EXACTLY with a hot take formatted as: 'Hot take: [Controversial opinion relevant to project]. Agree or disagree?'. DO NOT use marketing fluff like 'digital abyss'. Start EXACTLY mid-thought with relatable fears of the target audience. Keep the total post under 1200 characters.",
     temperature: 0.8,
     enabled: true,
   },
@@ -75,7 +81,7 @@ const DEFAULT_AGENTS: Agent[] = [
     name: "Agent Beta (Analytical & Metrics)",
     provider: "openai",
     model: "gpt-4o-mini",
-    systemPrompt: "You are Agent Beta, a LinkedIn strategist specializing in actionable frameworks, checklist delivery, bold numbers, and direct step-by-step value. Avoid corporate fluff. CRITICAL: Limit any feature breakdowns to a maximum of 2 short bullets and use emoji bullets (like ⚡️ and 🛡️) instead of plain dashes. Do not write long product spec sheets or abstract filler. Use 'We built' instead of 'I built'. Use hardcoded/verifiable benchmarks (e.g., '1.8M lines in 4.3 seconds') and MUST include a bridging sentence before the metrics (e.g., 'Here\\'s what we measured on an M3 Max:'). Anchor claims with a clear visual proof placeholder callout. DO NOT use marketing phrases like 'game-changer'. Keep the total post under 1200 characters.",
+    systemPrompt: "You are Agent Beta, a LinkedIn strategist specializing in actionable frameworks, checklist delivery, bold numbers, and direct step-by-step value. Avoid corporate fluff. CRITICAL: Use emoji bullets for all line-by-line breakdowns/feature presentations to draw attention to them. Do not write long product spec sheets or abstract filler. Use 'We built' instead of 'I built'. Use hardcoded/verifiable benchmarks from the description and MUST include a bridging sentence before the metrics. Anchor claims with a clear visual proof placeholder callout. DO NOT use marketing phrases like 'game-changer'. Keep the total post under 1200 characters.",
     temperature: 0.3,
     enabled: true,
   },
@@ -84,7 +90,7 @@ const DEFAULT_AGENTS: Agent[] = [
     name: "Agent Gamma (Narrative & Story)",
     provider: "gemini",
     model: "gemini-2.5-flash",
-    systemPrompt: "You are Agent Gamma, a personal branding ghostwriter specializing in the hero's journey, authenticity, lessons learned, and vulnerability. Your goal is to build organic trust. Ground stories in real professional friction and daily pain like 'hope-driven development'. Talk like an engineer, NOT a marketer. Do not use phrases like 'digital abyss'. Use 'We built' instead of 'I built' to imply team credibility. Ban abstract filler. Keep the total post under 1200 characters so the best content isn't buried past the 'see more' fold.",
+    systemPrompt: "You are Agent Gamma, a personal branding ghostwriter specializing in the hero's journey, authenticity, lessons learned, and vulnerability. Your goal is to build organic trust. Ground stories in real professional friction and daily pain. Talk directly to the audience, NOT like a marketer. Do not use phrases like 'digital abyss'. Use 'We built' instead of 'I built' to imply team credibility. Ban abstract filler. Keep the total post under 1200 characters so the best content isn't buried past the 'see more' fold.",
     temperature: 0.85,
     enabled: true,
   },
@@ -117,17 +123,18 @@ export default function Home() {
     const archiveData = localStorage.getItem("vm_post_archive");
 
     if (keysData) {
-      try { setApiKeys(JSON.parse(keysData)); } catch (e) {}
+      try { setApiKeys(JSON.parse(keysData)); } catch (e) { }
     }
-    
+
     let loadedAgents = DEFAULT_AGENTS;
     if (agentsData) {
       try {
         const parsed = JSON.parse(agentsData);
-        const hasOldAgents = parsed.some((a: any) => 
-          a.id === "storytelling-ghost" || 
-          a.id === "analytical-growth" || 
-          a.id === "contrarian-tech-rebel"
+        const hasOldAgents = parsed.some((a: any) =>
+          a.id === "storytelling-ghost" ||
+          a.id === "analytical-growth" ||
+          a.id === "contrarian-tech-rebel" ||
+          a.systemPrompt.includes("hope-driven development")
         );
         if (parsed.length === 3 && !hasOldAgents) {
           loadedAgents = parsed;
@@ -149,7 +156,7 @@ export default function Home() {
         if (parsedArchive.length > 0) {
           setSelectedArchiveId(parsedArchive[0].id);
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     setLoaded(true);
@@ -279,7 +286,7 @@ export default function Home() {
       <main className="main-content">
         <header style={{ borderBottom: "1px solid var(--border-muted)", padding: "20px 36px", background: "rgba(3, 3, 5, 0.75)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 30 }}>
           <div className="flex items-center justify-between max-w-6xl mx-auto">
-            <h1 style={{ fontSize: "1.35rem", fontWeight: 800 }} className="tracking-tight text-white font-heading">
+            <h1 style={{ fontSize: "1.35rem", fontWeight: 500 }} className="tracking-tight text-white font-heading">
               {activeTab === "workspace" && "Writing Console"}
               {activeTab === "archive" && "Archived Publications"}
               {activeTab === "agents" && "Agent Customizer"}
@@ -386,7 +393,7 @@ export default function Home() {
                               {item.appName}
                             </h4>
                             <span className="custom-badge custom-badge-accent" style={{ fontSize: "0.6rem", padding: "2px 5px", flexShrink: 0 }}>
-                              Score: {item.result?.best?.score || 95}
+                              Score: {item.result?.best?.scores?.viralPotential || item.result?.best?.score || 95}
                             </span>
                           </div>
                           <p style={{ fontSize: "0.75rem", color: "var(--zinc-500)", margin: 0 }} className="line-clamp-2">
@@ -408,7 +415,7 @@ export default function Home() {
                         </div>
                       ))}
                     </div>
-                    
+
                     {/* Right pane: Archive Details */}
                     <div className="flex flex-col gap-6">
                       {archive.find(item => item.id === selectedArchiveId) ? (

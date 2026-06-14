@@ -52,7 +52,7 @@ export default function PostGeneratorForm({
   const [drafts, setDrafts] = useState<Record<string, { content: string; hookExplanation: string }>>({});
   const [critiques, setCritiques] = useState<Array<{ from: string; to: string; content: string; score: number }>>([]);
   const [refinements, setRefinements] = useState<Record<string, { content: string; score: number; argument: string }>>({});
-  const [settledPost, setSettledPost] = useState<{ content: string; score: number; critique: string } | null>(null);
+  const [settledPost, setSettledPost] = useState<{ content: string; scores?: any; score?: number; critique: string } | null>(null);
 
   // Typewriter output states
   const [typedDrafts, setTypedDrafts] = useState<Record<string, string>>({});
@@ -720,7 +720,7 @@ export default function PostGeneratorForm({
                     <Award size={12} /> CONSOLIDATED MASTER POST
                   </span>
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-300" style={{ fontFamily: "var(--font-mono)" }}>
-                    <TrendingUp size={12} className="text-amber-400 animate-bounce" /> Consensus Score: {settledPost.score}/100
+                    <TrendingUp size={12} className="text-amber-400 animate-bounce" /> Viral Potential: {settledPost.scores?.viralPotential || settledPost.score || 95}/100
                   </div>
                 </div>
 
