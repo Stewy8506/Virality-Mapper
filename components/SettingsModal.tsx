@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import {
-  Key, CheckCircle2, XCircle, Loader2,
+  Key, CheckCircle2, Loader2,
   Eye, EyeOff, Save, Palette, Code, User, Sliders, Cpu
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -75,8 +75,6 @@ export default function SettingsModal({
     }
     return "geist";
   });
-
-
 
   // Apply theme & font overrides live
   const handleSelectTheme = (selectedTheme: string) => {
@@ -176,19 +174,19 @@ export default function SettingsModal({
     const result = testResult[provider];
     if (testingProvider === provider) {
       return (
-        <span className="flex items-center gap-1.5 text-xs text-rose-400 mt-2 font-medium">
-          <Loader2 className="animate-spin" size={12} /> Testing Connection...
+        <span className="flex items-center gap-1.5 text-xs text-rose-400 mt-1 font-medium font-mono">
+          <Loader2 className="animate-spin" size={12} /> Testing...
         </span>
       );
     }
     if (!result) return null;
     return result.success ? (
-      <span className="flex items-center gap-1.5 text-xs text-emerald-400 mt-2 font-medium">
-        <CheckCircle2 size={12} /> {result.msg}
+      <span className="flex items-center gap-1.5 text-xs text-emerald-400 mt-1 font-medium font-mono">
+        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> {result.msg}
       </span>
     ) : (
-      <span className="flex items-center gap-1.5 text-xs text-red-400 mt-2 font-medium">
-        <XCircle size={12} /> {result.msg}
+      <span className="flex items-center gap-1.5 text-xs text-rose-400 mt-1 font-medium font-mono">
+        <span className="w-2 h-2 rounded-full bg-rose-500"></span> {result.msg}
       </span>
     );
   };
@@ -198,10 +196,10 @@ export default function SettingsModal({
       {isOpen && (
         <div className="settings-modal-backdrop" onClick={onClose}>
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
+            initial={{ opacity: 0, x: "100%" }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: "100%" }}
+            transition={{ type: "spring", stiffness: 350, damping: 30 }}
             className="settings-modal-container"
             onClick={(e) => e.stopPropagation()}
           >
@@ -273,7 +271,7 @@ export default function SettingsModal({
             </div>
 
             {/* Modal Scrollable Contents Panel */}
-            <div className="settings-modal-content">
+            <div className="settings-modal-content" data-lenis-prevent>
 
               {/* Tab 1: API Key Manager */}
               {activeTab === "credentials" && (
@@ -286,8 +284,8 @@ export default function SettingsModal({
                   </div>
 
                   <div className="flex flex-col gap-4">
-                    <div className="form-group">
-                      <label className="form-label">Google Gemini API Key</label>
+                    <div className="p-4 rounded-xl border border-zinc-800/50 bg-zinc-900/10 flex flex-col gap-3">
+                      <label className="form-label mb-0">Google Gemini API Key</label>
                       <div className="flex gap-2">
                         <div className="relative flex-1">
                           <input
@@ -306,15 +304,15 @@ export default function SettingsModal({
                             {showKeys["gemini"] ? <EyeOff size={14} /> : <Eye size={14} />}
                           </button>
                         </div>
-                        <button className="custom-btn custom-btn-secondary h-10 px-4" onClick={() => testConnection("gemini")}>
+                        <button className="custom-btn custom-btn-secondary h-10 px-4 flex-shrink-0" onClick={() => testConnection("gemini")}>
                           Test
                         </button>
                       </div>
                       {renderTestStatus("gemini")}
                     </div>
 
-                    <div className="form-group">
-                      <label className="form-label">OpenAI API Key</label>
+                    <div className="p-4 rounded-xl border border-zinc-800/50 bg-zinc-900/10 flex flex-col gap-3">
+                      <label className="form-label mb-0">OpenAI API Key</label>
                       <div className="flex gap-2">
                         <div className="relative flex-1">
                           <input
@@ -333,15 +331,15 @@ export default function SettingsModal({
                             {showKeys["openai"] ? <EyeOff size={14} /> : <Eye size={14} />}
                           </button>
                         </div>
-                        <button className="custom-btn custom-btn-secondary h-10 px-4" onClick={() => testConnection("openai")}>
+                        <button className="custom-btn custom-btn-secondary h-10 px-4 flex-shrink-0" onClick={() => testConnection("openai")}>
                           Test
                         </button>
                       </div>
                       {renderTestStatus("openai")}
                     </div>
 
-                    <div className="form-group">
-                      <label className="form-label">Anthropic API Key</label>
+                    <div className="p-4 rounded-xl border border-zinc-800/50 bg-zinc-900/10 flex flex-col gap-3">
+                      <label className="form-label mb-0">Anthropic API Key</label>
                       <div className="flex gap-2">
                         <div className="relative flex-1">
                           <input
@@ -360,15 +358,15 @@ export default function SettingsModal({
                             {showKeys["anthropic"] ? <EyeOff size={14} /> : <Eye size={14} />}
                           </button>
                         </div>
-                        <button className="custom-btn custom-btn-secondary h-10 px-4" onClick={() => testConnection("anthropic")}>
+                        <button className="custom-btn custom-btn-secondary h-10 px-4 flex-shrink-0" onClick={() => testConnection("anthropic")}>
                           Test
                         </button>
                       </div>
                       {renderTestStatus("anthropic")}
                     </div>
 
-                    <div className="form-group">
-                      <label className="form-label">OpenRouter API Key</label>
+                    <div className="p-4 rounded-xl border border-zinc-800/50 bg-zinc-900/10 flex flex-col gap-3">
+                      <label className="form-label mb-0">OpenRouter API Key</label>
                       <div className="flex gap-2">
                         <div className="relative flex-1">
                           <input
@@ -387,7 +385,7 @@ export default function SettingsModal({
                             {showKeys["openrouter"] ? <EyeOff size={14} /> : <Eye size={14} />}
                           </button>
                         </div>
-                        <button className="custom-btn custom-btn-secondary h-10 px-4" onClick={() => testConnection("openrouter")}>
+                        <button className="custom-btn custom-btn-secondary h-10 px-4 flex-shrink-0" onClick={() => testConnection("openrouter")}>
                           Test
                         </button>
                       </div>
@@ -395,7 +393,7 @@ export default function SettingsModal({
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="form-group">
+                      <div className="p-4 rounded-xl border border-zinc-800/50 bg-zinc-900/10 flex flex-col gap-2">
                         <label className="form-label">Ollama Host</label>
                         <input
                           type="text"
@@ -406,7 +404,7 @@ export default function SettingsModal({
                           onChange={handleKeyChange}
                         />
                       </div>
-                      <div className="form-group">
+                      <div className="p-4 rounded-xl border border-zinc-800/50 bg-zinc-900/10 flex flex-col gap-2">
                         <label className="form-label">LM Studio Host</label>
                         <input
                           type="text"
@@ -419,7 +417,7 @@ export default function SettingsModal({
                       </div>
                     </div>
 
-                    <div className="form-group">
+                    <div className="p-4 rounded-xl border border-zinc-800/50 bg-zinc-900/10 flex flex-col gap-2">
                       <label className="form-label">SerpApi Key (LinkedIn ground-truth search)</label>
                       <input
                         type="password"
@@ -481,7 +479,7 @@ export default function SettingsModal({
                     </div>
 
                     {/* Visual Mock Example Card */}
-                    <div className="p-4 rounded-lg border border-zinc-800 bg-zinc-900/30 flex items-center gap-3">
+                    <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-900/30 flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-lg font-bold text-zinc-400">
                         {prefs.linkedinAvatar || "💡"}
                       </div>
@@ -518,7 +516,7 @@ export default function SettingsModal({
                             key={d.id}
                             type="button"
                             onClick={() => handlePrefChange("layoutDensity", d.id)}
-                            className={`p-3 rounded border text-left cursor-pointer transition-all ${prefs.layoutDensity === d.id ? "bg-zinc-800/40 border-zinc-500" : "bg-transparent border-zinc-800 hover:border-zinc-700"
+                            className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${prefs.layoutDensity === d.id ? "bg-zinc-800/40 border-zinc-500" : "bg-transparent border-zinc-800 hover:border-zinc-700"
                               }`}
                           >
                             <span className="text-xs font-semibold text-white block">{d.name}</span>
@@ -572,7 +570,7 @@ export default function SettingsModal({
                     </div>
 
                     {/* Toggles */}
-                    <div className="flex flex-col gap-4 pt-2 border-t border-zinc-800/60">
+                    <div className="flex flex-col gap-4 pt-2.5 border-t border-zinc-800/60">
                       <div className="flex items-center justify-between">
                         <div className="flex flex-col gap-0.5">
                           <span className="text-xs font-semibold text-white">Self-Improving RAG Database</span>
@@ -620,8 +618,8 @@ export default function SettingsModal({
                   <div className="flex flex-col gap-5">
                     {/* Theme Presets */}
                     <div className="flex flex-col gap-2">
-                      <label className="form-label">Theme Preset</label>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                      <label className="form-label">Theme Preset Swatches</label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {[
                           { id: "obsidian", name: "Obsidian Black", bg: "#09090b", panel: "#111113", accent: "#f4f4f5" },
                           { id: "nordic", name: "Nordic Slate", bg: "#0b0f19", panel: "#131c2e", accent: "#38bdf8" },
@@ -635,17 +633,18 @@ export default function SettingsModal({
                               key={t.id}
                               type="button"
                               onClick={() => handleSelectTheme(t.id)}
-                              className={`p-2.5 rounded border text-left cursor-pointer transition-all ${isActive ? "border-zinc-400" : "border-zinc-800 hover:border-zinc-700 bg-zinc-950/20"
+                              className={`p-3 rounded-xl border text-left cursor-pointer transition-all flex flex-col justify-between ${isActive ? "border-zinc-300 bg-zinc-800/20" : "border-zinc-800 hover:border-zinc-700 bg-zinc-950/20"
                                 }`}
+                              style={{ minHeight: "80px" }}
                             >
                               <div className="flex items-center justify-between w-full mb-1">
-                                <span className="text-[11px] font-semibold text-white">{t.name}</span>
-                                {isActive && <span className="w-1.5 h-1.5 rounded-full bg-zinc-300" />}
+                                <span className="text-[12px] font-semibold text-white">{t.name}</span>
+                                {isActive && <CheckCircle2 size={13} className="text-zinc-300" />}
                               </div>
-                              <div className="flex gap-1">
-                                <span className="w-3.5 h-3.5 rounded-full border border-zinc-800/40 block" style={{ backgroundColor: t.bg }} />
-                                <span className="w-3.5 h-3.5 rounded-full border border-zinc-800/40 block" style={{ backgroundColor: t.panel }} />
-                                <span className="w-3.5 h-3.5 rounded-full border border-zinc-800/40 block" style={{ backgroundColor: t.accent }} />
+                              <div className="flex gap-1.5 mt-2">
+                                <span className="w-4 h-4 rounded-full border border-zinc-800/40 block" style={{ backgroundColor: t.bg }} title="Background" />
+                                <span className="w-4 h-4 rounded-full border border-zinc-800/40 block" style={{ backgroundColor: t.panel }} title="Panel" />
+                                <span className="w-4 h-4 rounded-full border border-zinc-800/40 block" style={{ backgroundColor: t.accent }} title="Accent" />
                               </div>
                             </button>
                           );

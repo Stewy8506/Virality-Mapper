@@ -61,6 +61,40 @@ interface UserPreferences {
   enableRAG: boolean;
 }
 
+// Reusable Circular Progress Ring Indicator
+function CircularProgress({ score, size = 42 }: { score: number; size?: number }) {
+  const radius = (size - 6) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const strokeDashoffset = circumference - (score / 100) * circumference;
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg className="transform -rotate-90" width={size} height={size}>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="var(--border-muted)"
+          strokeWidth="3"
+          fill="transparent"
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="var(--accent)"
+          strokeWidth="3"
+          fill="transparent"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          style={{ transition: "stroke-dashoffset 0.35s" }}
+        />
+      </svg>
+      <span className="absolute text-[10px] font-mono font-bold text-zinc-300">{score}</span>
+    </div>
+  );
+}
+
 export default function ResultsDisplay({
   result,
   preferences,
@@ -108,10 +142,10 @@ export default function ResultsDisplay({
   const restLines = lines.slice(4).join("\n");
 
   return (
-    <div className="max-w-4xl mx-auto flex flex-col gap-6 anim-fade-up" style={{ marginTop: "40px", paddingBottom: "40px" }}>
+    <div className="max-w-4xl mx-auto flex flex-col gap-8 anim-fade-up" style={{ marginTop: "40px", paddingBottom: "40px" }}>
       
       {/* Title */}
-      <div className="flex justify-center items-center gap-2 mb-2">
+      <div className="flex justify-center items-center gap-2.5 mb-2">
         <div className="flow-step-icon active" style={{ width: "32px", height: "32px" }}>
           <Zap size={14} />
         </div>
@@ -122,7 +156,7 @@ export default function ResultsDisplay({
 
       {/* Live Trends Box */}
       {result.trends && result.trends.length > 0 && (
-        <div className="glass-panel p-5" style={{ background: "var(--panel-bg)" }}>
+        <div className="glass-panel p-5">
           <div className="flex items-center gap-2 mb-3">
             <TrendingUp size={16} className="text-zinc-400" />
             <span style={{ fontSize: "0.85rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--foreground)" }}>
@@ -141,8 +175,11 @@ export default function ResultsDisplay({
 
       {/* Synthesis Section */}
       <div style={{ width: "100%" }}>
-        <div className="glass-panel p-6 flex flex-col justify-between" style={{ minHeight: "420px" }}>
-          <div className="flex flex-col gap-4 flex-1">
+        <div className="glass-panel p-6 flex flex-col justify-between relative overflow-hidden" style={{ minHeight: "420px" }}>
+          {/* Top edge gradient stripe */}
+          <div className="absolute top-0 left-0 right-0 h-1.5" style={{ background: "linear-gradient(90deg, var(--border-muted), var(--accent), var(--border-muted))" }}></div>
+          
+          <div className="flex flex-col gap-4 flex-1 mt-2">
             <div className="flex justify-between items-center flex-wrap gap-2">
               <div className="flex items-center gap-2">
                 <span className="custom-badge custom-badge-accent">
@@ -185,22 +222,23 @@ export default function ResultsDisplay({
               {previewMode === "editor" ? (
                 <motion.div
                   key="editor"
-                  initial={{ opacity: 0, y: 5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -5 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex-1"
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  transition={{ duration: 0.15 }}
+                  className="flex-1 relative"
                 >
                   {/* Clean editor-style preview pane */}
                   <div
-                    className="p-4"
+                    className="p-4 pr-14"
+                    data-lenis-prevent
                     style={{
                       background: "var(--background)",
                       border: "1px solid var(--border-muted)",
-                      borderRadius: "8px",
+                      borderRadius: "10px",
                       whiteSpace: "pre-wrap",
-                      fontSize: "0.9rem",
-                      lineHeight: 1.65,
+                      fontSize: "1.02rem",
+                      lineHeight: 1.7,
                       color: "var(--foreground)",
                       minHeight: "220px",
                       maxHeight: "400px",
@@ -210,14 +248,23 @@ export default function ResultsDisplay({
                   >
                     {result.best.content}
                   </div>
+
+                  {/* Circular FAB Copy Button */}
+                  <button
+                    onClick={() => copyToClipboard("best-settled", result.best.content)}
+                    className="absolute bottom-4 right-4 h-10 w-10 rounded-full flex items-center justify-center bg-accent text-background hover:bg-accent-hover transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg z-20"
+                    title={copiedId === "best-settled" ? "Copied!" : "Copy to clipboard"}
+                  >
+                    {copiedId === "best-settled" ? <CheckCircle2 size={16} /> : <Copy size={16} />}
+                  </button>
                 </motion.div>
               ) : (
                 <motion.div
                   key="linkedin"
-                  initial={{ opacity: 0, y: 5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -5 }}
-                  transition={{ duration: 0.2 }}
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  transition={{ duration: 0.15 }}
                   className="flex-1 py-4"
                 >
                   {/* Simulated LinkedIn Desktop Layout Frame */}
@@ -264,90 +311,56 @@ export default function ResultsDisplay({
 
             {/* Rationale Section */}
             <div
-              className="py-3.5 px-4 rounded"
+              className="py-3.5 px-5 rounded-r-xl"
               style={{
                 fontSize: "0.82rem",
                 background: "var(--background)",
                 borderLeft: "3px solid var(--accent)",
-                borderRadius: "0 8px 8px 0",
                 lineHeight: 1.5,
               }}
             >
-              <div className="flex items-center gap-2 mb-1 text-zinc-400 font-semibold uppercase text-[10px] font-mono tracking-wider">
+              <div className="flex items-center gap-2 mb-2 text-zinc-400 font-semibold uppercase text-[10px] font-mono tracking-wider">
                 <Cpu size={12} className="text-rose-500" />
                 <span>Settle consensus rationale</span>
               </div>
-              <p className="italic" style={{ color: "var(--zinc-400)", margin: 0 }}>
+              <p className="italic mb-3" style={{ color: "var(--zinc-400)", margin: 0 }}>
                 {result.best.critique}
               </p>
               
               {result.best.scores && (
-                <div className="flex flex-wrap gap-4 mt-3 pt-3 border-t border-zinc-800">
-                  <div className="flex items-center gap-1.5 text-[10px] font-mono font-semibold">
-                    <span className="text-zinc-500 uppercase">Hook:</span>
-                    <span className={result.best.scores.hookStrength >= 90 ? "text-emerald-400" : "text-amber-400"}>{result.best.scores.hookStrength}/100</span>
+                <div className="flex flex-wrap gap-6 mt-3 pt-3 border-t border-zinc-800">
+                  <div className="flex items-center gap-3">
+                    <CircularProgress score={result.best.scores.hookStrength} size={36} />
+                    <span className="text-[10px] font-mono font-semibold text-zinc-500 uppercase">Hook Strength</span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-[10px] font-mono font-semibold">
-                    <span className="text-zinc-500 uppercase">Readability:</span>
-                    <span className={result.best.scores.readability >= 90 ? "text-emerald-400" : "text-amber-400"}>{result.best.scores.readability}/100</span>
+                  <div className="flex items-center gap-3">
+                    <CircularProgress score={result.best.scores.readability} size={36} />
+                    <span className="text-[10px] font-mono font-semibold text-zinc-500 uppercase">Readability</span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-[10px] font-mono font-semibold">
-                    <span className="text-zinc-500 uppercase">Credibility:</span>
-                    <span className={result.best.scores.credibility >= 90 ? "text-emerald-400" : "text-amber-400"}>{result.best.scores.credibility}/100</span>
+                  <div className="flex items-center gap-3">
+                    <CircularProgress score={result.best.scores.credibility} size={36} />
+                    <span className="text-[10px] font-mono font-semibold text-zinc-500 uppercase">Credibility</span>
                   </div>
                 </div>
               )}
             </div>
           </div>
-
-          {/* Copy Button */}
-          <button
-            className="custom-btn custom-btn-accent w-full"
-            style={{
-              marginTop: "20px",
-              height: "44px",
-              fontSize: "0.88rem",
-            }}
-            onClick={() => copyToClipboard("best-settled", result.best.content)}
-          >
-            <AnimatePresence mode="wait">
-              {copiedId === "best-settled" ? (
-                <motion.span
-                  key="copied"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="flex items-center justify-center gap-2"
-                >
-                  <CheckCircle2 size={16} /> Copied to Clipboard!
-                </motion.span>
-              ) : (
-                <motion.span
-                  key="copy"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="flex items-center justify-center gap-2"
-                >
-                  <Copy size={16} /> Copy Final Settle Post
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </button>
         </div>
       </div>
 
       {/* AI Persona A/B Focus Group Simulator */}
       {result.best.personas && result.best.personas.length > 0 && (
-        <div className="glass-panel p-6 flex flex-col gap-6" style={{ background: "var(--panel-bg)" }}>
+        <div className="glass-panel p-6 flex flex-col gap-6">
           <div className="flex items-center gap-2 mb-2" style={{ borderBottom: "1px solid var(--border-muted)", paddingBottom: "14px" }}>
             <Cpu size={18} className="text-zinc-400" />
             <h3 style={{ fontSize: "1.05rem", fontWeight: 600 }} className="text-white">AI Target Audience Focus Group (A/B Test Simulation)</h3>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "20px" }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {result.best.personas.map((persona, idx: number) => {
               const avgScore = Math.round((persona.scrollStopping + persona.engagement + persona.virality) / 3);
               return (
-                <div key={idx} className="glass-panel p-4 flex flex-col gap-3 hover:border-zinc-700 transition-colors" style={{ background: "var(--background)" }}>
+                <div key={idx} className="glass-panel p-5 flex flex-col gap-3 hover:border-zinc-700 transition-colors" style={{ background: "var(--background)" }}>
                   <div className="flex items-center gap-3 justify-between">
                     <div className="flex items-center gap-2.5">
                       <div className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 text-lg" style={{ background: "var(--panel-bg)", borderColor: "var(--border-muted)" }}>
@@ -358,7 +371,7 @@ export default function ResultsDisplay({
                         <span style={{ fontSize: "0.7rem", color: "var(--zinc-500)" }}>Focus Persona</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded font-mono text-xs" style={{ background: "var(--panel-bg)", border: "1px solid var(--border-muted)" }}>
+                    <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-mono text-xs" style={{ background: "var(--panel-bg)", border: "1px solid var(--border-muted)" }}>
                       <span className="text-zinc-500">SCORE:</span>
                       <span style={{ color: avgScore >= 70 ? "var(--foreground)" : "var(--zinc-500)", fontWeight: 600 }}>
                         {avgScore}/100
@@ -370,7 +383,7 @@ export default function ResultsDisplay({
                     &ldquo;{persona.feedback}&rdquo;
                   </p>
 
-                  <div className="flex flex-col gap-2 mt-2 pt-2 border-t" style={{ borderColor: "var(--border-muted)" }}>
+                  <div className="flex flex-col gap-2.5 mt-2 pt-2.5 border-t" style={{ borderColor: "var(--border-muted)" }}>
                     <div className="flex items-center justify-between text-[10px] font-mono">
                       <span className="text-zinc-500">Scroll Stopping:</span>
                       <span className="text-zinc-300">{persona.scrollStopping}%</span>
@@ -412,62 +425,72 @@ export default function ResultsDisplay({
         <div style={{ flex: 1, height: "1px", background: "var(--border-muted)" }}></div>
       </div>
 
-      {/* Sub-tab Navigation */}
-      <div className="flex justify-center items-center gap-8 mb-6" style={{ borderBottom: "1px solid var(--border-muted)", paddingBottom: "14px" }}>
-        <button
-          className="tab-btn"
-          style={{
-            background: "none",
-            border: "none",
-            color: arenaTab === "drafts" ? "var(--foreground)" : "var(--zinc-500)",
-            fontSize: "0.85rem",
-            fontWeight: 600,
-            cursor: "pointer",
-            paddingBottom: "10px",
-            borderBottom: arenaTab === "drafts" ? "2px solid var(--accent)" : "none",
-            outline: "none",
-            transition: "all 0.2s",
-          }}
-          onClick={() => setArenaTab("drafts")}
-        >
-          Phase 1: Initial Drafts
-        </button>
-        <button
-          className="tab-btn"
-          style={{
-            background: "none",
-            border: "none",
-            color: arenaTab === "critiques" ? "var(--foreground)" : "var(--zinc-500)",
-            fontSize: "0.85rem",
-            fontWeight: 600,
-            cursor: "pointer",
-            paddingBottom: "10px",
-            borderBottom: arenaTab === "critiques" ? "2px solid var(--accent)" : "none",
-            outline: "none",
-            transition: "all 0.2s",
-          }}
-          onClick={() => setArenaTab("critiques")}
-        >
-          Phase 2: Critique Arena
-        </button>
-        <button
-          className="tab-btn"
-          style={{
-            background: "none",
-            border: "none",
-            color: arenaTab === "refinements" ? "var(--foreground)" : "var(--zinc-500)",
-            fontSize: "0.85rem",
-            fontWeight: 600,
-            cursor: "pointer",
-            paddingBottom: "10px",
-            borderBottom: arenaTab === "refinements" ? "2px solid var(--accent)" : "none",
-            outline: "none",
-            transition: "all 0.2s",
-          }}
-          onClick={() => setArenaTab("refinements")}
-        >
-          Phase 3: Refined Drafts
-        </button>
+      {/* Sub-tab Navigation (Pill Segmented Control Switcher) */}
+      <div className="flex justify-center mb-8">
+        <div className="flex bg-zinc-900/60 p-1 rounded-full border border-zinc-800/40 relative z-10">
+          <button
+            onClick={() => setArenaTab("drafts")}
+            className={`px-5 py-2.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 flex items-center gap-2 relative ${
+              arenaTab === "drafts" ? "text-background" : "text-zinc-400 hover:text-zinc-200"
+            }`}
+          >
+            <span className="relative z-10">Phase 1: Initial Drafts</span>
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold relative z-10 ${
+              arenaTab === "drafts" ? "bg-background text-foreground" : "bg-zinc-800 text-zinc-400"
+            }`}>
+              {result.initialDrafts.length}
+            </span>
+            {arenaTab === "drafts" && (
+              <motion.div
+                layoutId="activeArenaTab"
+                className="absolute inset-0 rounded-full bg-accent z-0"
+                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+              />
+            )}
+          </button>
+
+          <button
+            onClick={() => setArenaTab("critiques")}
+            className={`px-5 py-2.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 flex items-center gap-2 relative ${
+              arenaTab === "critiques" ? "text-background" : "text-zinc-400 hover:text-zinc-200"
+            }`}
+          >
+            <span className="relative z-10">Phase 2: Critiques</span>
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold relative z-10 ${
+              arenaTab === "critiques" ? "bg-background text-foreground" : "bg-zinc-800 text-zinc-400"
+            }`}>
+              {result.critiques.length}
+            </span>
+            {arenaTab === "critiques" && (
+              <motion.div
+                layoutId="activeArenaTab"
+                className="absolute inset-0 rounded-full bg-accent z-0"
+                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+              />
+            )}
+          </button>
+
+          <button
+            onClick={() => setArenaTab("refinements")}
+            className={`px-5 py-2.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 flex items-center gap-2 relative ${
+              arenaTab === "refinements" ? "text-background" : "text-zinc-400 hover:text-zinc-200"
+            }`}
+          >
+            <span className="relative z-10">Phase 3: Refined Drafts</span>
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold relative z-10 ${
+              arenaTab === "refinements" ? "bg-background text-foreground" : "bg-zinc-800 text-zinc-400"
+            }`}>
+              {result.refinedDrafts.length}
+            </span>
+            {arenaTab === "refinements" && (
+              <motion.div
+                layoutId="activeArenaTab"
+                className="absolute inset-0 rounded-full bg-accent z-0"
+                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+              />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Tab Panels */}
@@ -475,17 +498,20 @@ export default function ResultsDisplay({
         {arenaTab === "drafts" && (
           <motion.div
             key="drafts-tab"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.15 }}
             style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}
           >
             {result.initialDrafts.map((draft, idx) => (
               <div key={idx} className="glass-panel p-5 flex flex-col justify-between" style={{ minHeight: "320px" }}>
                 <div className="flex flex-col gap-3">
                   <div className="flex justify-between items-center" style={{ borderBottom: "1px solid var(--border-muted)", paddingBottom: "8px" }}>
-                    <span className="custom-badge" style={{ fontSize: "0.68rem" }}>{draft.name.split(" ")[0]}</span>
+                    <div className="flex items-center">
+                      <span className="text-[10px] text-zinc-500 font-bold mr-1.5 font-mono">#{idx + 1}</span>
+                      <span className="custom-badge" style={{ fontSize: "0.68rem" }}>{draft.name.split(" ")[0]}</span>
+                    </div>
                     <span style={{ fontSize: "0.68rem", color: "var(--zinc-500)", fontFamily: "var(--font-mono)" }}>
                       {draft.provider.toUpperCase()} • {draft.model.substring(0, 10)}
                     </span>
@@ -493,13 +519,14 @@ export default function ResultsDisplay({
                   
                   <div
                     className="p-3 font-mono"
+                    data-lenis-prevent
                     style={{
                       background: "var(--background)",
                       border: "1px solid var(--border-muted)",
-                      borderRadius: "6px",
+                      borderRadius: "10px",
                       whiteSpace: "pre-wrap",
                       fontSize: "0.75rem",
-                      lineHeight: 1.6,
+                      lineHeight: 1.7,
                       color: "var(--zinc-300)",
                       height: "220px",
                       overflowY: "auto",
@@ -508,7 +535,7 @@ export default function ResultsDisplay({
                     {draft.content}
                   </div>
 
-                  <div className="p-3 rounded border-l border-zinc-800" style={{ background: "var(--background)", fontSize: "0.72rem", lineHeight: 1.45 }}>
+                  <div className="p-3 rounded-lg border-l border-zinc-800" style={{ background: "var(--background)", fontSize: "0.72rem", lineHeight: 1.45 }}>
                     <span style={{ fontWeight: 600, display: "block", color: "var(--zinc-400)", marginBottom: "4px" }}>Hook Strategy:</span>
                     <span className="italic" style={{ color: "var(--zinc-400)" }}>{draft.hookExplanation}</span>
                   </div>
@@ -529,14 +556,14 @@ export default function ResultsDisplay({
         {arenaTab === "critiques" && (
           <motion.div
             key="critiques-tab"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.15 }}
             style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}
           >
             {result.critiques.map((crit, idx) => (
-              <div key={idx} className="glass-panel p-5 flex flex-col gap-2" style={{ background: "var(--panel-bg)" }}>
+              <div key={idx} className="glass-panel p-5 flex flex-col gap-2">
                 <div className="flex justify-between items-center" style={{ borderBottom: "1px solid var(--border-muted)", paddingBottom: "10px", marginBottom: "6px" }}>
                   <div className="flex items-center gap-1.5">
                     <span className="custom-badge" style={{ fontSize: "0.68rem" }}>{crit.from.split(" ")[0]}</span>
@@ -558,17 +585,20 @@ export default function ResultsDisplay({
         {arenaTab === "refinements" && (
           <motion.div
             key="refinements-tab"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.15 }}
             style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}
           >
             {result.refinedDrafts.map((refined, idx) => (
               <div key={idx} className="glass-panel p-5 flex flex-col justify-between" style={{ minHeight: "320px" }}>
                 <div className="flex flex-col gap-3">
                   <div className="flex justify-between items-center" style={{ borderBottom: "1px solid var(--border-muted)", paddingBottom: "8px" }}>
-                    <span className="custom-badge custom-badge-accent" style={{ fontSize: "0.68rem" }}>{refined.name.split(" ")[0]}</span>
+                    <div className="flex items-center">
+                      <span className="text-[10px] text-zinc-500 font-bold mr-1.5 font-mono">#{idx + 1}</span>
+                      <span className="custom-badge custom-badge-accent" style={{ fontSize: "0.68rem" }}>{refined.name.split(" ")[0]}</span>
+                    </div>
                     <span style={{ fontSize: "0.72rem", fontWeight: 600, color: "var(--zinc-400)", fontFamily: "var(--font-mono)" }}>
                       Self-Score: {refined.score}/100
                     </span>
@@ -576,13 +606,14 @@ export default function ResultsDisplay({
                   
                   <div
                     className="p-3 font-mono"
+                    data-lenis-prevent
                     style={{
                       background: "var(--background)",
                       border: "1px solid var(--border-muted)",
-                      borderRadius: "6px",
+                      borderRadius: "10px",
                       whiteSpace: "pre-wrap",
                       fontSize: "0.75rem",
-                      lineHeight: 1.6,
+                      lineHeight: 1.7,
                       color: "var(--zinc-300)",
                       height: "220px",
                       overflowY: "auto",
@@ -591,7 +622,7 @@ export default function ResultsDisplay({
                     {refined.content}
                   </div>
 
-                  <div className="p-3 rounded border-l border-zinc-800" style={{ background: "var(--background)", fontSize: "0.72rem", lineHeight: 1.45 }}>
+                  <div className="p-3 rounded-lg border-l border-zinc-800" style={{ background: "var(--background)", fontSize: "0.72rem", lineHeight: 1.45 }}>
                     <span style={{ fontWeight: 600, display: "block", color: "var(--zinc-400)", marginBottom: "4px" }}>Change Argument:</span>
                     <span className="italic" style={{ color: "var(--zinc-400)" }}>{refined.argument}</span>
                   </div>

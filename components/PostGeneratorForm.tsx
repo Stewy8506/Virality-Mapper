@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Sparkles, Cpu, ShieldAlert, Flame, BookOpen, User, Info, Search, MessageSquare, PenTool, GitCompare, Award, TrendingUp, Clock } from "lucide-react";
+import { Sparkles, Cpu, ShieldAlert, Flame, BookOpen, User, Info, MessageSquare, Award, TrendingUp, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Agent {
@@ -498,88 +498,42 @@ export default function PostGeneratorForm({
   };
 
   return (
-    <div className="max-w-6xl mx-auto flex flex-col gap-6">
+    <div className="max-w-6xl mx-auto flex flex-col gap-8">
       <AnimatePresence mode="wait">
         {!loading ? (
           <motion.div
             key="input-form"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.35, ease: "easeInOut" }}
-            className="grid"
-            style={{ gridTemplateColumns: "1.3fr 1fr", gap: "28px" }}
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            className="flex flex-col gap-6"
           >
-            {/* Left Panel: Input context */}
-            <form onSubmit={handleSubmit} className="glass-panel p-6 flex flex-col gap-4">
+            {/* Top Panel: Stacked Input context form */}
+            <form onSubmit={handleSubmit} className="glass-panel p-6 flex flex-col gap-5">
               <div className="flex items-center gap-2 mb-2" style={{ borderBottom: "1px solid var(--border-muted)", paddingBottom: "16px" }}>
                 <Flame className="text-rose-500 animate-pulse" size={18} />
                 <h2 style={{ fontSize: "1.1rem", fontWeight: 600 }} className="text-white">Post Context Parameters</h2>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">
-                  <Info size={14} className="text-rose-400" /> App / Project Name
-                </label>
-                <input
-                  required
-                  type="text"
-                  id="appName"
-                  name="appName"
-                  className="form-input"
-                  placeholder="e.g. Virality Mapper"
-                  value={formData.appName}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">
-                  <BookOpen size={14} className="text-rose-400" /> What does it do? (Features & Problems Solved)
-                </label>
-                <textarea
-                  required
-                  id="description"
-                  name="description"
-                  className="form-input"
-                  placeholder="Explain what problem it solves, its target core features, benchmarks, and technology used..."
-                  value={formData.description}
-                  onChange={handleChange}
-                />
-              </div>
-
               <div className="grid-2">
-                <div className="form-group">
+                <div className="form-group mb-0">
                   <label className="form-label">
-                    <User size={14} className="text-rose-400" /> Target Audience
+                    <Info size={14} className="text-rose-400" /> App / Project Name
                   </label>
                   <input
+                    required
                     type="text"
-                    id="targetAudience"
-                    name="targetAudience"
+                    id="appName"
+                    name="appName"
                     className="form-input"
-                    placeholder="e.g. Senior Developers, Tech Managers"
-                    value={formData.targetAudience}
+                    placeholder="e.g. Virality Mapper"
+                    value={formData.appName}
                     onChange={handleChange}
                   />
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">
-                    <Sparkles size={14} className="text-rose-400" /> Writing Tone
-                  </label>
-                  <input
-                    type="text"
-                    id="tone"
-                    name="tone"
-                    className="form-input"
-                    placeholder="e.g. Technical, punchy, narrative"
-                    value={formData.tone}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                <div className="form-group">
+                <div className="form-group mb-0">
                   <label className="form-label">
                     <Sparkles size={14} className="text-rose-400" /> Hook Archetype
                   </label>
@@ -600,6 +554,53 @@ export default function PostGeneratorForm({
                 </div>
               </div>
 
+              <div className="form-group mb-0">
+                <label className="form-label">
+                  <BookOpen size={14} className="text-rose-400" /> What does it do? (Features & Problems Solved)
+                </label>
+                <textarea
+                  required
+                  id="description"
+                  name="description"
+                  className="form-input"
+                  placeholder="Explain what problem it solves, its target core features, benchmarks, and technology used..."
+                  value={formData.description}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="grid-2">
+                <div className="form-group mb-0">
+                  <label className="form-label">
+                    <User size={14} className="text-rose-400" /> Target Audience
+                  </label>
+                  <input
+                    type="text"
+                    id="targetAudience"
+                    name="targetAudience"
+                    className="form-input"
+                    placeholder="e.g. Senior Developers, Tech Managers"
+                    value={formData.targetAudience}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <div className="form-group mb-0">
+                  <label className="form-label">
+                    <Sparkles size={14} className="text-rose-400" /> Writing Tone
+                  </label>
+                  <input
+                    type="text"
+                    id="tone"
+                    name="tone"
+                    className="form-input"
+                    placeholder="e.g. Technical, punchy, narrative"
+                    value={formData.tone}
+                    onChange={handleChange}
+                  />
+                </div>
+              </div>
+
               {error && (
                 <div className="p-4 flex items-start gap-3 rounded border" style={{ background: "var(--panel-bg)", borderColor: "var(--border-active)", marginTop: "12px" }}>
                   <span className="text-zinc-500" style={{ marginTop: "2px", flexShrink: 0 }}>⚠️</span>
@@ -616,41 +617,39 @@ export default function PostGeneratorForm({
               <button 
                 type="submit" 
                 className="custom-btn custom-btn-accent w-full" 
-                style={{ marginTop: "16px" }}
+                style={{ marginTop: "16px", padding: "14px 20px" }}
                 disabled={activeAgentsCount !== 3 || loading}
               >
                 {loading ? <Sparkles size={16} className="animate-spin" /> : <Sparkles size={16} />} Initiate 3-Agent Copywriting Debate
               </button>
             </form>
 
-            {/* Right Panel: Active agents widget */}
-            <div className="glass-panel p-6 flex flex-col gap-4 justify-between">
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-2 mb-2" style={{ borderBottom: "1px solid var(--border-muted)", paddingBottom: "16px" }}>
-                  <Cpu className="text-rose-500" size={18} />
-                  <h2 style={{ fontSize: "1.1rem", fontWeight: 600 }} className="text-white">Debate Arena Structure</h2>
-                </div>
-                
-                <p style={{ fontSize: "0.85rem", color: "var(--zinc-400)", lineHeight: 1.5 }}>
-                  This panel routes your project characteristics through a 3-agent critique network.
-                  The writers construct individual drafts, challenge each other&apos;s metrics/hooks, refine their content, and synthesize a single optimized post.
-                </p>
+            {/* Bottom Panel: Stacked Active agents arena preview */}
+            <div className="glass-panel p-6 flex flex-col gap-4">
+              <div className="flex items-center gap-2 mb-2" style={{ borderBottom: "1px solid var(--border-muted)", paddingBottom: "16px" }}>
+                <Cpu className="text-rose-500" size={18} />
+                <h2 style={{ fontSize: "1.1rem", fontWeight: 600 }} className="text-white">Active Debate Arena Network</h2>
+              </div>
+              
+              <p style={{ fontSize: "0.85rem", color: "var(--zinc-400)", lineHeight: 1.5 }} className="mb-2">
+                This panel routes your project characteristics through a 3-agent critique network.
+                The writers construct individual drafts, challenge each other&apos;s metrics/hooks, refine their content, and synthesize a single optimized post.
+              </p>
 
-                <div className="flex flex-col border border-zinc-800 rounded-lg divide-y divide-zinc-800" style={{ background: "var(--background)" }}>
-                  {agents.filter((a) => a.enabled).map((agent) => (
-                    <div key={agent.id} className="flex items-center justify-between p-4 transition-all hover:opacity-80">
-                      <div className="flex flex-col gap-1">
-                        <span style={{ fontSize: "0.85rem", fontWeight: 600 }} className="text-white">
-                          {agent.name}
-                        </span>
-                        <span style={{ fontSize: "0.7rem", color: "var(--zinc-500)", fontFamily: "var(--font-mono)" }}>
-                          {agent.provider.toUpperCase()} • {agent.model}
-                        </span>
-                      </div>
-                      <span className="custom-badge custom-badge-accent text-[10px]">ACTIVE WRITER</span>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {agents.filter((a) => a.enabled).map((agent) => (
+                  <div key={agent.id} className="p-4 rounded-xl border border-zinc-800/40 flex flex-col gap-2 justify-between" style={{ background: "rgba(0,0,0,0.1)" }}>
+                    <div className="flex flex-col gap-1">
+                      <span style={{ fontSize: "0.85rem", fontWeight: 600 }} className="text-white">
+                        {agent.name}
+                      </span>
+                      <span style={{ fontSize: "0.7rem", color: "var(--zinc-500)", fontFamily: "var(--font-mono)" }}>
+                        {agent.provider.toUpperCase()} • {agent.model}
+                      </span>
                     </div>
-                  ))}
-                </div>
+                    <span className="custom-badge custom-badge-accent text-[9px] w-fit font-mono uppercase tracking-wider mt-2">ACTIVE WRITER</span>
+                  </div>
+                ))}
               </div>
             </div>
           </motion.div>
@@ -658,10 +657,10 @@ export default function PostGeneratorForm({
           /* Live Visual Whiteboard Debate Panel */
           <motion.div
             key="debate-panel"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.35, ease: "easeInOut" }}
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
             className="glass-panel p-6 w-full flex flex-col gap-6"
             style={{ minHeight: "480px" }}
           >
@@ -672,7 +671,7 @@ export default function PostGeneratorForm({
                   <Cpu className="animate-spin text-rose-500" size={20} />
                   <h3 style={{ fontSize: "1.25rem", fontWeight: 600, margin: 0 }} className="text-white">Debate Settle Console</h3>
                 </div>
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded border text-[11px] font-mono text-zinc-400" style={{ background: "var(--background)", borderColor: "var(--border-muted)" }}>
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border text-[11px] font-mono text-zinc-400" style={{ background: "var(--background)", borderColor: "var(--border-muted)" }}>
                   <Clock size={12} className="text-rose-500 animate-pulse" />
                   <span>ELAPSED TIME: {formatTime(elapsedTime)}</span>
                 </div>
@@ -680,267 +679,283 @@ export default function PostGeneratorForm({
               <p style={{ fontSize: "0.9rem", color: "var(--zinc-300)", fontWeight: 500, margin: 0 }} className="italic">
                 {statusMessage || "Grounding and preparing agents..."}
               </p>
-
-              {/* Debate Pipeline Flow Visual Map */}
-              <div className="w-full mt-4">
-                <div className="pipeline-container">
-                  <div className="pipeline-connector">
-                    <div className="pipeline-connector-flow" />
-                  </div>
-                  
-                  <div className={`pipeline-node ${activeStep === 0 ? "active" : activeStep > 0 ? "success" : ""}`}>
-                    <div className="pipeline-node-icon">
-                      <Search size={16} />
-                    </div>
-                    <span className="pipeline-node-label">Grounding</span>
-                  </div>
-
-                  <div className={`pipeline-node ${activeStep === 1 ? "active" : activeStep > 1 ? "success" : ""}`}>
-                    <div className="pipeline-node-icon">
-                      <PenTool size={16} />
-                    </div>
-                    <span className="pipeline-node-label">Drafting</span>
-                  </div>
-
-                  <div className={`pipeline-node ${activeStep === 2 ? "active" : activeStep > 2 ? "success" : ""}`}>
-                    <div className="pipeline-node-icon">
-                      <MessageSquare size={16} />
-                    </div>
-                    <span className="pipeline-node-label">Critiques</span>
-                  </div>
-
-                  <div className={`pipeline-node ${activeStep === 3 ? "active" : activeStep > 3 ? "success" : ""}`}>
-                    <div className="pipeline-node-icon">
-                      <GitCompare size={16} />
-                    </div>
-                    <span className="pipeline-node-label">Refinements</span>
-                  </div>
-
-                  <div className={`pipeline-node ${activeStep === 4 ? "active" : ""}`}>
-                    <div className="pipeline-node-icon">
-                      <Award size={16} />
-                    </div>
-                    <span className="pipeline-node-label">Synthesis</span>
-                  </div>
-                </div>
-              </div>
             </div>
 
-            {/* Error Overlay */}
-            {error && (
-              <div className="p-4 flex items-start gap-3 rounded bg-red-950/20 border border-red-500/20">
-                <ShieldAlert size={16} className="text-rose-500" style={{ marginTop: "2px" }} />
-                <p style={{ fontSize: "0.85rem", color: "#fca5a5", margin: 0 }}>{error}</p>
-              </div>
-            )}
+            {/* Split layout: Vertical timeline on the left rail, debate content on the right */}
+            <div className="flex flex-col md:flex-row gap-8 items-start">
+              {/* Left Column: Vertical Timeline */}
+              <div className="w-full md:w-[150px] flex-shrink-0">
+                <div className="vertical-timeline">
+                  <div className="vertical-timeline-line" />
+                  
+                  <div className={`timeline-node ${activeStep === 0 ? "active" : activeStep > 0 ? "success" : ""}`}>
+                    <div className="timeline-node-dot" />
+                    <div className="timeline-node-content">
+                      <span className="timeline-node-label">Grounding</span>
+                    </div>
+                  </div>
 
-            {/* Step 1: Trends Box */}
-            {trends.length > 0 && activeStep === 0 && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="p-5 rounded border"
-                style={{ background: "var(--panel-bg)", borderColor: "var(--border-active)" }}
-              >
-                <div className="flex items-center gap-2 mb-3 text-rose-400 font-bold text-xs" style={{ fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>
-                  <TrendingUp size={14} /> SEARCH TRENDS RETRIEVED
+                  <div className={`timeline-node ${activeStep === 1 ? "active" : activeStep > 1 ? "success" : ""}`}>
+                    <div className="timeline-node-dot" />
+                    <div className="timeline-node-content">
+                      <span className="timeline-node-label">Drafting</span>
+                    </div>
+                  </div>
+
+                  <div className={`timeline-node ${activeStep === 2 ? "active" : activeStep > 2 ? "success" : ""}`}>
+                    <div className="timeline-node-dot" />
+                    <div className="timeline-node-content">
+                      <span className="timeline-node-label">Critiques</span>
+                    </div>
+                  </div>
+
+                  <div className={`timeline-node ${activeStep === 3 ? "active" : activeStep > 3 ? "success" : ""}`}>
+                    <div className="timeline-node-dot" />
+                    <div className="timeline-node-content">
+                      <span className="timeline-node-label">Refining</span>
+                    </div>
+                  </div>
+
+                  <div className={`timeline-node ${activeStep === 4 ? "active" : ""}`}>
+                    <div className="timeline-node-dot" />
+                    <div className="timeline-node-content">
+                      <span className="timeline-node-label">Synthesis</span>
+                    </div>
+                  </div>
                 </div>
-                <ul className="flex flex-col gap-2 pl-4 m-0" style={{ fontSize: "0.8rem", color: "var(--zinc-300)", lineHeight: 1.4 }}>
-                  {trends.map((t, i) => <li key={i}>{t}</li>)}
-                </ul>
-              </motion.div>
-            )}
+              </div>
 
-            {/* 3-Agent side-by-side cards */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "18px" }}>
-              {agents.filter((a) => a.enabled).map((agent) => {
-                const draft = drafts[agent.name];
-                const refinement = refinements[agent.name];
-                const typedDraft = typedDrafts[agent.name] || "";
-                const typedRefine = typedRefinements[agent.name] || "";
-
-                // Determine active badge
-                let statusBadge = "🔍 Waiting...";
-                let badgeClass = "text-zinc-500 border-zinc-800";
+              {/* Right Column: Main Debate Content */}
+              <div className="flex-1 flex flex-col gap-6 w-full">
                 
-                if (activeStep === 0) {
-                  statusBadge = "🔍 Grounding...";
-                  badgeClass = "text-rose-400 border-rose-500/20 bg-rose-500/5 animate-pulse font-bold";
-                } else if (activeStep === 1) {
-                  statusBadge = draft ? "✍️ Draft Ready" : "✍️ Drafting...";
-                  badgeClass = draft ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/5 font-bold" : "text-rose-400 border-rose-500/20 bg-rose-500/5 animate-pulse font-bold";
-                } else if (activeStep === 2) {
-                  statusBadge = "💬 Critiquing...";
-                  badgeClass = "text-rose-400 border-rose-500/20 bg-rose-500/5 animate-pulse font-bold";
-                } else if (activeStep === 3) {
-                  statusBadge = refinement ? "🔄 Refined" : "🔄 Refining...";
-                  badgeClass = refinement ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/5 font-bold" : "text-rose-400 border-rose-500/20 bg-rose-500/5 animate-pulse font-bold";
-                } else if (activeStep === 4) {
-                  statusBadge = "🤝 Settled";
-                  badgeClass = "text-emerald-400 border-emerald-500/20 bg-emerald-500/5 font-bold";
-                }
+                {/* Error Overlay */}
+                {error && (
+                  <div className="p-4 flex items-start gap-3 rounded-xl bg-red-950/20 border border-red-500/20">
+                    <ShieldAlert size={16} className="text-rose-500" style={{ marginTop: "2px" }} />
+                    <p style={{ fontSize: "0.85rem", color: "#fca5a5", margin: 0 }}>{error}</p>
+                  </div>
+                )}
 
-                return (
-                  <div
-                    key={agent.id}
-                    className="glass-panel p-4 flex flex-col gap-4 justify-between"
-                    style={{
-                      minHeight: "320px",
-                      borderColor: activeStep === 1 && !draft ? "var(--border-active)" : "var(--border-muted)"
-                    }}
+                {/* Step 1: Trends Box */}
+                {trends.length > 0 && activeStep === 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="p-5 rounded-xl border"
+                    style={{ background: "var(--panel-bg)", borderColor: "var(--border-active)" }}
                   >
-                    <div className="flex flex-col gap-3">
-                      <div className="flex justify-between items-center" style={{ borderBottom: "1px solid var(--border-muted)", paddingBottom: "10px" }}>
-                        <span style={{ fontSize: "0.82rem", fontWeight: 600 }} className="text-white">{agent.name.split(" ")[0]}</span>
-                        <span className={`custom-badge ${badgeClass}`} style={{ fontSize: "0.62rem" }}>{statusBadge}</span>
-                      </div>
+                    <div className="flex items-center gap-2 mb-3 text-rose-400 font-bold text-xs" style={{ fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>
+                      <TrendingUp size={14} /> SEARCH TRENDS RETRIEVED
+                    </div>
+                    <ul className="flex flex-col gap-2 pl-4 m-0" style={{ fontSize: "0.8rem", color: "var(--zinc-300)", lineHeight: 1.4 }}>
+                      {trends.map((t, i) => <li key={i}>{t}</li>)}
+                    </ul>
+                  </motion.div>
+                )}
 
+                {/* 3-Agent side-by-side cards */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {agents.filter((a) => a.enabled).map((agent) => {
+                    const draft = drafts[agent.name];
+                    const refinement = refinements[agent.name];
+                    const typedDraft = typedDrafts[agent.name] || "";
+                    const typedRefine = typedRefinements[agent.name] || "";
+
+                    // Determine active badge
+                    let statusBadge = "🔍 Waiting...";
+                    let badgeClass = "text-zinc-500 border-zinc-800";
+                    
+                    if (activeStep === 0) {
+                      statusBadge = "🔍 Grounding...";
+                      badgeClass = "text-rose-400 border-rose-500/20 bg-rose-500/5 animate-pulse font-bold";
+                    } else if (activeStep === 1) {
+                      statusBadge = draft ? "✍️ Draft Ready" : "✍️ Drafting...";
+                      badgeClass = draft ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/5 font-bold" : "text-rose-400 border-rose-500/20 bg-rose-500/5 animate-pulse font-bold";
+                    } else if (activeStep === 2) {
+                      statusBadge = "💬 Peer Critique";
+                      badgeClass = "text-rose-400 border-rose-500/20 bg-rose-500/5 animate-pulse font-bold";
+                    } else if (activeStep === 3) {
+                      statusBadge = refinement ? "🔄 Refined" : "🔄 Refining...";
+                      badgeClass = refinement ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/5 font-bold" : "text-rose-400 border-rose-500/20 bg-rose-500/5 animate-pulse font-bold";
+                    } else if (activeStep === 4) {
+                      statusBadge = "🤝 Settled";
+                      badgeClass = "text-emerald-400 border-emerald-500/20 bg-emerald-500/5 font-bold";
+                    }
+
+                    return (
                       <div
-                        className="p-3 font-mono"
+                        key={agent.id}
+                        className="glass-panel p-5 flex flex-col gap-4 justify-between relative min-h-[380px]"
                         style={{
-                          background: "var(--background)",
-                          border: "1px solid var(--border-muted)",
-                          borderRadius: "6px",
-                          fontSize: "0.75rem",
-                          lineHeight: 1.6,
-                          height: "240px",
-                          overflowY: "auto",
-                          color: "var(--zinc-300)",
-                          whiteSpace: "pre-wrap",
+                          borderColor: activeStep === 1 && !draft ? "var(--border-active)" : "var(--border-muted)"
                         }}
                       >
-                        {activeStep >= 3 && typedRefine
-                          ? typedRefine
-                          : typedDraft
-                            ? typedDraft
-                            : <span className="text-zinc-600 italic">[Waiting for agent pipeline flow...]</span>
-                        }
+                        <div className="flex flex-col gap-3">
+                          <div className="flex justify-between items-center pl-2" style={{ borderLeft: "3px solid var(--accent)", borderBottom: "1px solid var(--border-muted)", paddingBottom: "10px" }}>
+                            <span style={{ fontSize: "0.85rem", fontWeight: 600 }} className="text-white">{agent.name.split(" ")[0]}</span>
+                          </div>
+
+                          <span className={`custom-badge ${badgeClass} absolute top-5 right-5`} style={{ fontSize: "0.62rem" }}>
+                            {statusBadge}
+                          </span>
+
+                          <div
+                            className="p-3 font-mono mt-4"
+                            style={{
+                              background: "var(--background)",
+                              border: "1px solid var(--border-muted)",
+                              borderRadius: "10px",
+                              fontSize: "0.75rem",
+                              lineHeight: 1.6,
+                              height: "260px",
+                              overflowY: "auto",
+                              color: "var(--zinc-300)",
+                              whiteSpace: "pre-wrap",
+                            }}
+                          >
+                            {activeStep >= 3 && typedRefine
+                              ? typedRefine
+                              : typedDraft
+                                ? typedDraft
+                                : <span className="text-zinc-600 italic">[Awaiting agent processing...]</span>
+                            }
+                          </div>
+                        </div>
+
+                        {refinement && (
+                          <div className="p-3 rounded-lg border mt-2" style={{ background: "var(--background)", borderColor: "var(--border-muted)", fontSize: "0.68rem", lineHeight: 1.45 }}>
+                            <span style={{ fontWeight: 600, color: "var(--zinc-300)", display: "block", marginBottom: "3px" }}>Change Logic:</span>
+                            <span className="italic" style={{ color: "var(--zinc-400)" }}>{refinement.argument}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Critique Feed Chat bubbles */}
+                {critiques.length > 0 && (
+                  <div className="flex flex-col gap-4 mt-4" style={{ borderTop: "1px solid var(--border-muted)", paddingTop: "24px" }}>
+                    <div style={{ fontSize: "0.8rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--zinc-400)", fontFamily: "var(--font-mono)" }} className="flex items-center gap-2">
+                      <MessageSquare size={14} className="text-zinc-500" />
+                      <span>Peer Critique Arena Feed</span>
+                    </div>
+                    <div className="chat-feed">
+                      <AnimatePresence>
+                        {critiques.map((crit, idx) => (
+                          <motion.div
+                            key={idx}
+                            initial={{ opacity: 0, scale: 0.96, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            transition={{ duration: 0.25 }}
+                            className="chat-bubble-container"
+                          >
+                            <div className="chat-bubble-meta chat-bubble-left-meta">
+                              <span>From: <strong className="text-zinc-300">{crit.from.split(" ")[0]}</strong></span>
+                              <span className="text-zinc-600 font-bold mx-1">➔</span>
+                              <span>To: <strong className="text-zinc-300">{crit.to.split(" ")[0]}</strong></span>
+                            </div>
+                            <div className="chat-bubble chat-bubble-left">
+                              <p style={{ margin: 0, paddingRight: "36px" }}>
+                                &ldquo;{crit.content}&rdquo;
+                              </p>
+                              <span className="absolute top-3 right-3 flex items-center justify-center w-7 h-7 rounded-full bg-zinc-900 text-[10px] font-bold text-rose-400 border border-zinc-800" title="Critique Score">
+                                {crit.score}
+                              </span>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+                )}
+
+                {/* Live System Monitor HUD terminal */}
+                <div className="flex flex-col gap-2 mt-4" style={{ borderTop: "1px solid var(--border-muted)", paddingTop: "24px" }}>
+                  <div className="flex items-center justify-between">
+                    <div style={{ fontSize: "0.8rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--zinc-400)", fontFamily: "var(--font-mono)" }}>
+                      💻 HUD Systems Console
+                    </div>
+                    {activityLogs.length > 0 && (
+                      <span className="text-[10px] font-mono text-rose-400 font-semibold uppercase animate-pulse">
+                        Streaming Active Logs
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="hud-console">
+                    <div className="hud-header">
+                      <div className="hud-dots">
+                        <span className="hud-dot red"></span>
+                        <span className="hud-dot yellow"></span>
+                        <span className="hud-dot green"></span>
+                      </div>
+                      <span style={{ marginLeft: "12px", marginRight: "auto" }}>LOG BUFFER SYSTEM</span>
+                      <span>ID: VM_DEBATE_STREAM</span>
+                    </div>
+                    <div ref={activityContainerRef} className="hud-body" data-lenis-prevent>
+                      {activityLogs.length === 0 ? (
+                        <span style={{ color: "var(--zinc-600)" }} className="italic">[Awaiting socket stream initialization...]</span>
+                      ) : (
+                        activityLogs.map((log) => {
+                          let logClass = "hud-log-info";
+                          if (log.type === "success") logClass = "hud-log-success";
+                          if (log.type === "warning") logClass = "hud-log-warning";
+                          
+                          return (
+                            <div key={log.id} className="hud-log-row">
+                              <span className="hud-log-time">[{log.time}]</span>
+                              <span className={`hud-log-text ${logClass}`}>{log.text}</span>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Settle consensus panel */}
+                {settledPost && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="glass-panel p-6 mt-6"
+                    style={{ borderColor: "var(--border-active)" }}
+                  >
+                    <div className="flex justify-between items-center mb-4">
+                      <span className="custom-badge custom-badge-accent">
+                        <Award size={12} /> CONSOLIDATED MASTER POST
+                      </span>
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-300" style={{ fontFamily: "var(--font-mono)" }}>
+                        <TrendingUp size={12} className="text-zinc-500" /> Viral Potential: {settledPost.scores?.viralPotential || settledPost.score || 95}/100
                       </div>
                     </div>
 
-                    {refinement && (
-                      <div className="p-3 rounded border" style={{ background: "var(--background)", borderColor: "var(--border-muted)", fontSize: "0.68rem", lineHeight: 1.4 }}>
-                        <span style={{ fontWeight: 600, color: "var(--zinc-300)", display: "block", marginBottom: "3px" }}>Change Logic:</span>
-                        <span className="italic" style={{ color: "var(--zinc-400)" }}>{refinement.argument}</span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Critique Feed Chat */}
-            {critiques.length > 0 && (
-              <div className="flex flex-col gap-3 mt-4" style={{ borderTop: "1px solid var(--border-muted)", paddingTop: "24px" }}>
-                <div style={{ fontSize: "0.8rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--zinc-400)", fontFamily: "var(--font-mono)" }}>
-                  💬 Peer Critique Arena Feed
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
-                  <AnimatePresence>
-                    {critiques.map((crit, idx) => (
-                      <motion.div
-                        key={idx}
-                        initial={{ opacity: 0, scale: 0.96, y: 10 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        transition={{ duration: 0.25 }}
-                        className="p-4 rounded flex flex-col gap-2 border" style={{ background: "var(--background)", borderColor: "var(--border-muted)" }}
-                      >
-                        <div className="flex justify-between items-center" style={{ fontSize: "0.68rem" }}>
-                          <div className="flex items-center gap-1.5">
-                            <span className="custom-badge" style={{ fontSize: "0.62rem" }}>{crit.from.split(" ")[0]}</span>
-                            <span style={{ color: "var(--zinc-600)" }}>➔</span>
-                            <span className="custom-badge" style={{ fontSize: "0.62rem" }}>{crit.to.split(" ")[0]}</span>
-                          </div>
-                          <span className="font-bold text-rose-400">Score: {crit.score}</span>
-                        </div>
-                        <p style={{ fontSize: "0.78rem", color: "var(--zinc-300)", lineHeight: 1.45, margin: 0 }} className="italic">
-                          &ldquo;{crit.content}&rdquo;
-                        </p>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </div>
-              </div>
-            )}
-
-            {/* Live System Monitor HUD terminal */}
-            <div className="flex flex-col gap-2 mt-4" style={{ borderTop: "1px solid var(--border-muted)", paddingTop: "24px" }}>
-              <div className="flex items-center justify-between">
-                <div style={{ fontSize: "0.8rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--zinc-400)", fontFamily: "var(--font-mono)" }}>
-                  💻 HUD Systems Console
-                </div>
-                {activityLogs.length > 0 && (
-                  <span className="text-[10px] font-mono text-rose-400 font-semibold uppercase animate-pulse">
-                    Streaming Active Logs
-                  </span>
+                    <div
+                      className="p-4"
+                      style={{
+                        background: "var(--background)",
+                        border: "1px solid var(--border-active)",
+                        borderRadius: "10px",
+                        whiteSpace: "pre-wrap",
+                        fontSize: "0.88rem",
+                        lineHeight: 1.6,
+                        color: "var(--foreground)",
+                        minHeight: "150px",
+                        overflowY: "auto",
+                        fontFamily: "var(--font-sans)",
+                      }}
+                    >
+                      {typedSettledContent}
+                    </div>
+                    <p style={{ fontSize: "0.75rem", color: "var(--zinc-500)", fontStyle: "italic", marginTop: "14px", margin: 0 }}>
+                      Consensus reached. Writing and synchronizing with workspace displays...
+                    </p>
+                  </motion.div>
                 )}
-              </div>
-              
-              <div className="hud-console">
-                <div className="hud-header">
-                  <span>LOG BUFFER SYSTEM</span>
-                  <span>ID: VM_DEBATE_STREAM</span>
-                </div>
-                <div ref={activityContainerRef} className="hud-body">
-                  {activityLogs.length === 0 ? (
-                    <span style={{ color: "var(--zinc-600)" }} className="italic">[Awaiting socket stream initialization...]</span>
-                  ) : (
-                    activityLogs.map((log) => {
-                      let logClass = "hud-log-info";
-                      if (log.type === "success") logClass = "hud-log-success";
-                      if (log.type === "warning") logClass = "hud-log-warning";
-                      
-                      return (
-                        <div key={log.id} className="hud-log-row">
-                          <span className="hud-log-time">[{log.time}]</span>
-                          <span className={`hud-log-text ${logClass}`}>{log.text}</span>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
+
               </div>
             </div>
-
-            {/* Settle consensus panel */}
-            {settledPost && (
-              <motion.div
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="glass-panel p-6 mt-6"
-                style={{ borderColor: "var(--border-active)" }}
-              >
-                <div className="flex justify-between items-center mb-4">
-                  <span className="custom-badge custom-badge-accent">
-                    <Award size={12} /> CONSOLIDATED MASTER POST
-                  </span>
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-300" style={{ fontFamily: "var(--font-mono)" }}>
-                    <TrendingUp size={12} className="text-zinc-500" /> Viral Potential: {settledPost.scores?.viralPotential || settledPost.score || 95}/100
-                  </div>
-                </div>
-
-                <div
-                  className="p-4"
-                  style={{
-                    background: "var(--background)",
-                    border: "1px solid var(--border-active)",
-                    borderRadius: "8px",
-                    whiteSpace: "pre-wrap",
-                    fontSize: "0.88rem",
-                    lineHeight: 1.6,
-                    color: "var(--foreground)",
-                    minHeight: "150px",
-                    overflowY: "auto",
-                    fontFamily: "var(--font-sans)",
-                  }}
-                >
-                  {typedSettledContent}
-                </div>
-                <p style={{ fontSize: "0.75rem", color: "var(--zinc-500)", fontStyle: "italic", marginTop: "14px", margin: 0 }}>
-                  Consensus reached. Writing and synchronizing with workspace displays...
-                </p>
-              </motion.div>
-            )}
 
           </motion.div>
         )}

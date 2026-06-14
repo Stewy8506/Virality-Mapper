@@ -49,6 +49,7 @@ export default function AgentPlayground({
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
   const [models, setModels] = useState<string[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
+  const [hoveredAgentId, setHoveredAgentId] = useState<string | null>(null);
 
   const loadModels = async (provider: string) => {
     setLoadingModels(true);
@@ -166,75 +167,88 @@ export default function AgentPlayground({
 
       {/* Validation Warning Alert */}
       {activeAgentsCount !== 3 && (
-        <div className="p-4 rounded border flex items-center gap-3 bg-rose-950/10 border-rose-500/20 text-rose-400 text-xs">
+        <div className="p-4 rounded-xl border flex items-center gap-3 bg-rose-950/10 border-rose-500/20 text-rose-400 text-xs">
           <span>⚠️ <strong>Debate Flow Warning</strong>: You have selected <strong>{activeAgentsCount}</strong> active agents. You must enable <strong>exactly 3</strong> agents from the list below to run the debate arena.</span>
         </div>
       )}
 
-      <div className="grid" style={{ gridTemplateColumns: editingAgent ? "1.2fr 1fr" : "1fr", gap: "24px", alignItems: "start" }}>
-        
-        {/* Left Side: Agents List */}
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col border border-zinc-800 rounded-lg divide-y divide-zinc-800" style={{ background: "var(--panel-bg)" }}>
-            {agents.map((agent) => (
-              <div key={agent.id} className="flex items-center justify-between p-5 transition-all hover:opacity-95 flex-wrap md:flex-nowrap gap-4">
-                <div className="flex flex-col gap-1 pr-6" style={{ flex: 1 }}>
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <span style={{ fontWeight: 600, fontSize: "0.92rem" }} className="text-white">{agent.name}</span>
-                    <span className="custom-badge custom-badge-accent">{agent.provider.toUpperCase()} • {agent.model}</span>
-                  </div>
-                  <p style={{ fontSize: "0.8rem", color: "var(--zinc-500)", marginTop: "6px", lineHeight: 1.5 }} className="line-clamp-2 italic">
-                    &ldquo;{agent.systemPrompt}&rdquo;
-                  </p>
-                </div>
-                
-                {/* Switch & Action Controls */}
-                <div className="flex items-center gap-5 flex-shrink-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-zinc-500 font-mono">ACTIVE DEBATER:</span>
-                    <label className="switch">
-                      <input
-                        type="checkbox"
-                        checked={agent.enabled}
-                        onChange={() => {
-                          const updated = agents.map((a) => a.id === agent.id ? { ...a, enabled: !a.enabled } : a);
-                          onUpdateAgents(updated);
-                        }}
-                      />
-                      <span className="slider"></span>
-                    </label>
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <button className="custom-btn custom-btn-secondary" style={{ padding: "8px 12px", fontSize: "0.78rem" }} onClick={() => handleEditAgent(agent)}>
-                      Configure
-                    </button>
-                    <button 
-                      className="p-2 hover:bg-zinc-800/40 border border-transparent hover:border-zinc-800 rounded text-zinc-500 hover:text-rose-400 cursor-pointer"
-                      onClick={() => handleDeleteAgent(agent.id)}
-                      title="Delete Agent"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
+      {/* Floating Cards Layout */}
+      <div className="flex flex-col gap-4">
+        {agents.map((agent) => (
+          <div
+            key={agent.id}
+            onMouseEnter={() => setHoveredAgentId(agent.id)}
+            onMouseLeave={() => setHoveredAgentId(null)}
+            className="glass-panel p-5 flex items-center justify-between transition-all hover:translate-y-[-2px] flex-wrap md:flex-nowrap gap-4"
+          >
+            <div className="flex flex-col gap-1 pr-6" style={{ flex: 1 }}>
+              <div className="flex items-center gap-3 flex-wrap">
+                <span style={{ fontWeight: 600, fontSize: "0.92rem" }} className="text-white">{agent.name}</span>
+                <span className="custom-badge custom-badge-accent uppercase tracking-wider font-mono text-[9px]">
+                  {agent.provider.toUpperCase()} • {agent.model}
+                </span>
               </div>
-            ))}
+              <p 
+                style={{ fontSize: "0.8rem", color: "var(--zinc-500)", marginTop: "6px", lineHeight: 1.5 }}
+                className={`italic transition-all duration-300 ${hoveredAgentId === agent.id ? "" : "line-clamp-2"}`}
+              >
+                &ldquo;{agent.systemPrompt}&rdquo;
+              </p>
+            </div>
+            
+            {/* Switch & Action Controls */}
+            <div className="flex items-center gap-5 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-zinc-500 font-mono">ACTIVE DEBATER:</span>
+                <label className="switch">
+                  <input
+                    type="checkbox"
+                    checked={agent.enabled}
+                    onChange={() => {
+                      const updated = agents.map((a) => a.id === agent.id ? { ...a, enabled: !a.enabled } : a);
+                      onUpdateAgents(updated);
+                    }}
+                  />
+                  <span className="slider"></span>
+                </label>
+              </div>
+              
+              <div className="flex gap-2">
+                <button 
+                  className="custom-btn custom-btn-secondary" 
+                  style={{ padding: "8px 12px", fontSize: "0.78rem" }} 
+                  onClick={() => handleEditAgent(agent)}
+                >
+                  Configure
+                </button>
+                <button 
+                  className="p-2 hover:bg-zinc-800/40 border border-transparent hover:border-zinc-800 rounded-lg text-zinc-500 hover:text-rose-400 cursor-pointer"
+                  onClick={() => handleDeleteAgent(agent.id)}
+                  title="Delete Agent"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
+        ))}
+      </div>
 
-        {/* Right Side: Configuration Drawer */}
-        <AnimatePresence>
-          {editingAgent && (
+      {/* Overlay Configuration Drawer Panel */}
+      <AnimatePresence>
+        {editingAgent && (
+          <div className="settings-modal-backdrop" onClick={() => setEditingAgent(null)}>
             <motion.div
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: "100%" }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-              className="glass-panel p-6 flex flex-col gap-5 sticky"
-              style={{ top: "100px", zIndex: 10 }}
+              exit={{ opacity: 0, x: "100%" }}
+              transition={{ type: "spring", stiffness: 350, damping: 30 }}
+              className="settings-modal-container flex-col"
+              style={{ maxWidth: "520px" }}
+              onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex justify-between items-center" style={{ borderBottom: "1px solid var(--border-muted)", paddingBottom: "14px" }}>
+              {/* Drawer Header */}
+              <div className="flex justify-between items-center px-6 py-5 border-b border-zinc-800/60" style={{ background: "rgba(0,0,0,0.1)" }}>
                 <h3 style={{ fontSize: "1.05rem", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px" }} className="text-white font-heading">
                   <Sliders size={15} className="text-zinc-400" />
                   Configure Specialist
@@ -248,8 +262,9 @@ export default function AgentPlayground({
                 </button>
               </div>
 
-              <div className="flex flex-col gap-4">
-                <div className="form-group">
+              {/* Drawer Content */}
+              <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-5" data-lenis-prevent>
+                <div className="form-group mb-0">
                   <label className="form-label">Agent Name</label>
                   <input
                     type="text"
@@ -259,7 +274,7 @@ export default function AgentPlayground({
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="form-group mb-0">
                   <label className="form-label">Provider</label>
                   <select
                     className="form-input"
@@ -278,7 +293,7 @@ export default function AgentPlayground({
                   </select>
                 </div>
 
-                <div className="form-group">
+                <div className="form-group mb-0">
                   <label className="form-label flex justify-between items-center">
                     <span>Model Name</span>
                     {loadingModels && <RefreshCw size={12} className="animate-spin text-zinc-500" />}
@@ -310,19 +325,19 @@ export default function AgentPlayground({
                   )}
                 </div>
 
-                <div className="form-group">
+                <div className="form-group mb-0">
                   <label className="form-label">System Persona Prompt</label>
                   <textarea
                     className="form-input font-mono text-xs"
                     style={{ background: "var(--background)" }}
-                    rows={6}
+                    rows={8}
                     value={editingAgent.systemPrompt}
                     onChange={(e) => setEditingAgent({ ...editingAgent, systemPrompt: e.target.value })}
                   />
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label flex justify-between font-mono text-xs text-zinc-500">
+                <div className="form-group mb-0">
+                  <label className="form-label flex justify-between font-mono text-xs text-zinc-500 mb-1">
                     <span>Creativity Temperature</span>
                     <span className="text-white font-bold">{editingAgent.temperature}</span>
                   </label>
@@ -333,22 +348,26 @@ export default function AgentPlayground({
                     step="0.05"
                     value={editingAgent.temperature}
                     onChange={(e) => setEditingAgent({ ...editingAgent, temperature: parseFloat(e.target.value) })}
+                    style={{
+                      background: "linear-gradient(to right, #60a5fa, #f59e0b)"
+                    }}
                   />
                 </div>
+              </div>
 
-                <div className="flex gap-3 mt-4" style={{ borderTop: "1px solid var(--border-muted)", paddingTop: "16px" }}>
-                  <button className="custom-btn custom-btn-accent" style={{ flex: 1 }} onClick={handleSaveAgent}>
-                    Save Changes
-                  </button>
-                  <button className="custom-btn custom-btn-secondary" style={{ flex: 1 }} onClick={() => setEditingAgent(null)}>
-                    Cancel
-                  </button>
-                </div>
+              {/* Drawer Actions */}
+              <div className="px-6 py-4 border-t border-zinc-800/60 flex gap-3" style={{ background: "rgba(0,0,0,0.05)" }}>
+                <button className="custom-btn custom-btn-accent flex-1 py-2.5" onClick={handleSaveAgent}>
+                  Save Changes
+                </button>
+                <button className="custom-btn custom-btn-secondary flex-1 py-2.5" onClick={() => setEditingAgent(null)}>
+                  Cancel
+                </button>
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

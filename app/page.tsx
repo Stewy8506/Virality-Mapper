@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sparkles, Sliders, Activity, TrendingUp, ChevronLeft, ChevronRight, Plus, LayoutDashboard } from "lucide-react";
+import { Sparkles, Sliders, Activity, TrendingUp, ChevronLeft, ChevronRight, Plus, LayoutDashboard, Key, Database, Terminal, Search, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import PostGeneratorForm from "@/components/PostGeneratorForm";
 import ResultsDisplay from "@/components/ResultsDisplay";
@@ -19,7 +19,6 @@ interface UserPreferences {
   fontSize: number;
   enableRAG: boolean;
 }
-
 
 interface GenerationResult {
   trends: string[];
@@ -147,6 +146,7 @@ const DEFAULT_KEYS: ApiKeys = {
 export default function Home() {
   const [activeTab, setActiveTab] = useState<"workspace" | "new-publication" | "agents">("workspace");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [archiveSearch, setArchiveSearch] = useState("");
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     if (typeof window !== "undefined") {
@@ -213,7 +213,6 @@ export default function Home() {
       if (agentsData) {
         try {
           const parsed = JSON.parse(agentsData);
-          // Auto migration for custom agents database logic
           if (Array.isArray(parsed) && parsed.length >= 3) {
             return parsed;
           }
@@ -276,6 +275,13 @@ export default function Home() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // Toggle body class for layout density dynamically
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      document.body.className = `layout-${preferences.layoutDensity}`;
+    }
+  }, [preferences.layoutDensity]);
+
   const handleSaveCustomCss = (css: string) => {
     setCustomCss(css);
     localStorage.setItem("custom_css", css);
@@ -327,6 +333,7 @@ export default function Home() {
       if (selectedArchiveId === id) {
         setSelectedArchiveId(null);
         setResult(null);
+        setActiveTab("workspace");
       }
       return updated;
     });
@@ -350,6 +357,12 @@ export default function Home() {
 
   const activeAgentsCount = agents.filter((a) => a.enabled).length;
 
+  const filteredArchive = archive.filter(item => 
+    item.appName.toLowerCase().includes(archiveSearch.toLowerCase()) ||
+    item.description.toLowerCase().includes(archiveSearch.toLowerCase()) ||
+    (item.result?.best?.content || "").toLowerCase().includes(archiveSearch.toLowerCase())
+  );
+
   return (
     <div className={`dashboard-layout layout-${preferences.layoutDensity} ${preferences.sidebarPosition === "right" ? "sidebar-right" : ""}`}>
       {/* Dynamic Style Injection element */}
@@ -367,10 +380,11 @@ export default function Home() {
           {/* Header & toggle menu */}
           <div className="flex items-center justify-between w-full sidebar-header-container">
             <div className="brand-text">
-              <Sparkles size={18} className="text-zinc-300 animate-pulse" />
-              <span>
-                Virality <span className="font-normal font-sans italic">Mapper</span>
-              </span>
+              <div className="flex items-center gap-2">
+                <Sparkles size={20} className="text-zinc-300 animate-pulse" />
+                <span className="font-semibold tracking-tight">Virality Mapper</span>
+              </div>
+              <span className="text-[9px] text-zinc-500 font-mono tracking-widest uppercase mt-0.5">Settle Engine</span>
             </div>
             <button 
               onClick={toggleSidebar} 
@@ -389,7 +403,7 @@ export default function Home() {
               setResult(null);
               setActiveTab("new-publication");
             }}
-            style={{ padding: "10px 16px", fontSize: "0.8rem", borderRadius: "6px" }}
+            style={{ padding: "12px 18px", fontSize: "0.82rem" }}
             title="Create New Publication"
           >
             <Plus size={15} />
@@ -419,19 +433,40 @@ export default function Home() {
             </div>
           </nav>
 
-          {/* Historical Saved Publications integrated (OpenWebUI chat-style list) */}
+          {/* Historical Saved Publications integrated */}
           <div className="flex flex-col gap-2 flex-1 overflow-hidden sidebar-archive-list" style={{ borderTop: "1px solid var(--border-muted)", paddingTop: "16px" }}>
             <div className="text-[10px] font-mono font-semibold uppercase text-zinc-500 tracking-wider mb-1 px-2 flex items-center justify-between">
               <span>Saved History</span>
               {archive.length > 0 && <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-bold">{archive.length}</span>}
             </div>
-            {archive.length === 0 ? (
+
+            {/* Filter Search */}
+            {archive.length > 0 && (
+              <div className="relative px-2 mb-1 flex items-center">
+                <Search size={12} className="absolute left-4 text-zinc-500" />
+                <input
+                  type="text"
+                  placeholder="Filter history..."
+                  value={archiveSearch}
+                  onChange={(e) => setArchiveSearch(e.target.value)}
+                  className="form-input text-xs w-full pl-7 py-1.5"
+                  style={{
+                    borderRadius: "8px",
+                    height: "28px",
+                    background: "rgba(0, 0, 0, 0.15)",
+                    border: "1px solid var(--border-muted)"
+                  }}
+                />
+              </div>
+            )}
+
+            {filteredArchive.length === 0 ? (
               <div className="text-[10px] text-zinc-500 italic px-2 py-3 leading-normal">
-                No publications saved yet. Generate a post to start building your archive.
+                {archive.length === 0 ? "No publications saved yet." : "No matching records found."}
               </div>
             ) : (
               <div className="flex flex-col gap-1.5 overflow-y-auto pr-1 flex-1">
-                {archive.map((item) => (
+                {filteredArchive.map((item) => (
                   <div
                     key={item.id}
                     onClick={() => {
@@ -439,9 +474,10 @@ export default function Home() {
                       setResult(item.result);
                       setActiveTab("workspace");
                     }}
-                    className="p-2.5 rounded border text-left cursor-pointer transition-all hover:bg-zinc-800/20"
+                    className="p-2.5 rounded text-left cursor-pointer transition-all hover:bg-zinc-800/20"
                     style={{
-                      borderColor: selectedArchiveId === item.id ? "var(--border-active)" : "transparent",
+                      borderLeft: selectedArchiveId === item.id ? "3px solid var(--accent)" : "3px solid transparent",
+                      paddingLeft: "10px",
                       background: selectedArchiveId === item.id ? "var(--accent-glow)" : "transparent",
                       fontSize: "0.78rem"
                     }}
@@ -460,26 +496,24 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Sidebar Info/Stats Widget */}
-        <div className="sidebar-footer-widget p-3 border border-zinc-800 rounded-lg flex flex-col gap-2 background-zinc-900/40 backdrop-blur-md mb-4" style={{ background: "var(--background)" }}>
-          <div className="flex justify-between text-xs text-zinc-400">
-            <span>Specialist Pool:</span>
-            <span style={{ color: activeAgentsCount === 3 ? "var(--foreground)" : "var(--zinc-500)", fontWeight: 700 }}>
-              {activeAgentsCount} / 3 selected
-            </span>
+        {/* Sidebar Info/Stats Widget merged above profile */}
+        {!isSidebarCollapsed && (
+          <div className="sidebar-footer-widget flex flex-col gap-1 font-mono text-[9px] text-zinc-500 px-3 py-2 border-t border-zinc-800/40 mb-2 mt-auto">
+            <div className="flex justify-between">
+              <span>POOL:</span>
+              <span className="text-zinc-400 font-bold">{activeAgentsCount} ACTIVE</span>
+            </div>
+            <div className="flex justify-between">
+              <span>ENGINE:</span>
+              <span className="text-zinc-400 font-bold">DEBATE SETTLE</span>
+            </div>
           </div>
-          <div className="flex justify-between text-xs text-zinc-400">
-            <span>Engine mode:</span>
-            <span className="text-white font-bold text-[10px] uppercase font-mono">
-              Debate Settle
-            </span>
-          </div>
-        </div>
+        )}
 
         {/* Profile Card & Settings trigger at the bottom of the sidebar */}
         {!isSidebarCollapsed ? (
           <div className="sidebar-profile">
-            <div className="sidebar-profile-info">
+            <div className="sidebar-profile-info cursor-pointer" onClick={() => setIsSettingsOpen(true)}>
               <div className="sidebar-profile-avatar">
                 {preferences.linkedinAvatar || "💡"}
               </div>
@@ -497,7 +531,7 @@ export default function Home() {
               className="sidebar-profile-btn"
               title="Settings & Configurations"
             >
-              <Sliders size={14} />
+              <Settings size={15} className="transition-transform duration-300 hover:rotate-90" />
             </button>
           </div>
         ) : (
@@ -506,45 +540,43 @@ export default function Home() {
             className="sidebar-profile-collapsed-btn"
             title="Settings & Configurations"
           >
-            <Sliders size={14} />
+            {preferences.linkedinAvatar || "💡"}
           </button>
         )}
       </aside>
 
       {/* Main dashboard console workspace */}
       <main className="main-content">
-        <header style={{ borderBottom: "1px solid var(--border-muted)", padding: "20px 32px", background: "var(--background)", position: "sticky", top: 0, zIndex: 30 }}>
-          <div className="flex items-center justify-between max-w-6xl mx-auto">
-            <h1 style={{ fontSize: "1.25rem", fontWeight: 500 }} className="tracking-tight text-white font-heading">
-              {activeTab === "workspace" && (selectedArchiveId ? "Publication Review Pane" : "Workspace Hub")}
-              {activeTab === "new-publication" && "Debate Console"}
-              {activeTab === "agents" && "Agents Playground"}
-            </h1>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setIsSettingsOpen(true)}
-                className="custom-btn custom-btn-secondary text-[11px] h-8 px-3.5 flex items-center justify-center gap-1.5 cursor-pointer font-bold"
-              >
-                <Sliders size={12} />
-                <span>Settings</span>
-              </button>
-              <div className="status-bar">
-                <span className="status-dot"></span>
-                <span>Debate Engine V3</span>
-              </div>
-            </div>
+        {/* Floating Command Bar inside main canvas */}
+        <div className="command-bar animate-fade-up">
+          <span className="text-xs text-zinc-500 font-mono font-semibold uppercase tracking-wider">
+            {activeTab === "workspace" && (selectedArchiveId ? "Review Pane" : "Workspace Hub")}
+            {activeTab === "new-publication" && "Debate Console"}
+            {activeTab === "agents" && "Agents Playground"}
+          </span>
+          <div className="h-4 w-px bg-zinc-800"></div>
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="sidebar-toggle-btn h-7 w-7"
+            title="Configurations"
+          >
+            <Sliders size={13} />
+          </button>
+          <div className="status-bar py-1 px-3">
+            <span className="status-dot"></span>
+            <span className="text-[10px] font-bold">DEBATE V3</span>
           </div>
-        </header>
+        </div>
 
         <div className="container">
           <AnimatePresence mode="wait">
             {activeTab === "workspace" && (
               <motion.div
                 key="workspace"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
                 className="w-full flex flex-col gap-6"
               >
                 {selectedArchiveId ? (
@@ -560,10 +592,10 @@ export default function Home() {
                     }
                     return (
                       <>
-                        <div className="glass-panel p-4 flex flex-col gap-3" style={{ background: "var(--panel-bg)" }}>
-                          <div className="flex items-center justify-between" style={{ borderBottom: "1px solid var(--border-muted)", paddingBottom: "8px" }}>
+                        <div className="glass-panel p-6 flex flex-col gap-4">
+                          <div className="flex items-center justify-between" style={{ borderBottom: "1px solid var(--border-muted)", paddingBottom: "12px" }}>
                             <div className="flex items-center gap-2">
-                              <Sparkles size={13} className="text-zinc-500" />
+                              <Sparkles size={15} className="text-zinc-400" />
                               <span style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--zinc-400)" }}>Original Prompt Context</span>
                             </div>
                             <button
@@ -579,24 +611,24 @@ export default function Home() {
                                 setResult(null);
                                 setActiveTab("new-publication");
                               }}
-                              className="custom-btn custom-btn-secondary text-[10px] h-7 px-3 flex items-center justify-center cursor-pointer font-bold"
+                              className="custom-btn custom-btn-secondary text-[11px] h-8 px-4 flex items-center justify-center cursor-pointer font-bold"
                             >
                               Clone parameters to Editor
                             </button>
                           </div>
                           
                           <div className="grid grid-cols-2 gap-4 text-xs">
-                            <div><strong className="text-zinc-500">AppName:</strong> <span className="text-zinc-300">{selectedItem.appName}</span></div>
-                            <div><strong className="text-zinc-500">Tone:</strong> <span className="text-zinc-300">{selectedItem.tone || "General"}</span></div>
-                            <div style={{ gridColumn: "span 2" }}><strong className="text-zinc-500">Description:</strong> <span className="text-zinc-400 line-clamp-3">{selectedItem.description}</span></div>
-                            <div style={{ gridColumn: "span 2" }}><strong className="text-zinc-500">Target Audience:</strong> <span className="text-zinc-300">{selectedItem.targetAudience || "General Professionals"}</span></div>
+                            <div><strong className="text-zinc-500 uppercase tracking-wider text-[10px] block mb-1">AppName</strong> <span className="text-zinc-200 font-medium">{selectedItem.appName}</span></div>
+                            <div><strong className="text-zinc-500 uppercase tracking-wider text-[10px] block mb-1">Tone</strong> <span className="text-zinc-200 font-medium">{selectedItem.tone || "General"}</span></div>
+                            <div style={{ gridColumn: "span 2" }}><strong className="text-zinc-500 uppercase tracking-wider text-[10px] block mb-1">Description</strong> <span className="text-zinc-300 leading-relaxed">{selectedItem.description}</span></div>
+                            <div style={{ gridColumn: "span 2" }}><strong className="text-zinc-500 uppercase tracking-wider text-[10px] block mb-1">Target Audience</strong> <span className="text-zinc-300 leading-relaxed">{selectedItem.targetAudience || "General Professionals"}</span></div>
                           </div>
 
                           {/* Performance metrics dashboard inline */}
-                          <div style={{ borderTop: "1px dashed var(--border-muted)", paddingTop: "12px", marginTop: "4px" }}>
-                            <div className="flex justify-between items-center mb-2">
-                              <div className="flex items-center gap-1.5 text-zinc-500 font-semibold uppercase text-[10px] tracking-wider font-mono">
-                                <TrendingUp size={12} className="text-zinc-400 animate-pulse" />
+                          <div style={{ borderTop: "1px dashed var(--border-muted)", paddingTop: "16px", marginTop: "8px" }}>
+                            <div className="flex justify-between items-center mb-3">
+                              <div className="flex items-center gap-1.5 text-zinc-400 font-semibold uppercase text-[10px] tracking-wider font-mono">
+                                <TrendingUp size={13} className="text-zinc-400 animate-pulse" />
                                 <span>Self-Published Analytics (Feedback Loop)</span>
                               </div>
                               {!selectedItem.performance && editingPerformanceId !== selectedItem.id && (
@@ -615,13 +647,12 @@ export default function Home() {
                             </div>
 
                             {editingPerformanceId === selectedItem.id ? (
-                              <div className="flex flex-wrap gap-3 items-end p-3 rounded border" style={{ background: "var(--background)", borderColor: "var(--border-muted)" }}>
+                              <div className="flex flex-wrap gap-4 items-end p-4 rounded-xl border border-zinc-800/40" style={{ background: "rgba(0,0,0,0.15)", borderColor: "var(--border-muted)" }}>
                                 <div className="flex flex-col gap-1 text-[10px] font-mono text-zinc-400">
                                   <span>Impressions</span>
                                   <input
                                     type="number"
-                                    className="form-input text-xs w-24 h-7 p-1"
-                                    style={{ background: "var(--panel-bg)", borderColor: "var(--border-muted)" }}
+                                    className="form-input text-xs w-28 h-8 p-1.5"
                                     value={impressions}
                                     onChange={(e) => setImpressions(Number(e.target.value))}
                                   />
@@ -630,8 +661,7 @@ export default function Home() {
                                   <span>Likes</span>
                                   <input
                                     type="number"
-                                    className="form-input text-xs w-24 h-7 p-1"
-                                    style={{ background: "var(--panel-bg)", borderColor: "var(--border-muted)" }}
+                                    className="form-input text-xs w-28 h-8 p-1.5"
                                     value={likes}
                                     onChange={(e) => setLikes(Number(e.target.value))}
                                   />
@@ -640,8 +670,7 @@ export default function Home() {
                                   <span>Comments</span>
                                   <input
                                     type="number"
-                                    className="form-input text-xs w-24 h-7 p-1"
-                                    style={{ background: "var(--panel-bg)", borderColor: "var(--border-muted)" }}
+                                    className="form-input text-xs w-28 h-8 p-1.5"
                                     value={comments}
                                     onChange={(e) => setComments(Number(e.target.value))}
                                   />
@@ -652,24 +681,24 @@ export default function Home() {
                                       handleSavePerformance(selectedItem.id, { impressions, likes, comments });
                                       setEditingPerformanceId(null);
                                     }}
-                                    className="custom-btn custom-btn-accent text-[10px] h-7 px-3 flex items-center justify-center cursor-pointer"
+                                    className="custom-btn custom-btn-accent text-[11px] h-8 px-4 flex items-center justify-center cursor-pointer"
                                   >
                                     Save
                                   </button>
                                   <button
                                     onClick={() => setEditingPerformanceId(null)}
-                                    className="custom-btn custom-btn-secondary text-[10px] h-7 px-3 flex items-center justify-center cursor-pointer"
+                                    className="custom-btn custom-btn-secondary text-[11px] h-8 px-4 flex items-center justify-center cursor-pointer"
                                   >
                                     Cancel
                                   </button>
                                 </div>
                               </div>
                             ) : selectedItem.performance ? (
-                              <div className="flex items-center gap-4 justify-between bg-zinc-900/30 border border-zinc-800/40 p-2.5 rounded text-xs font-mono text-zinc-300">
-                                <div className="flex gap-4">
-                                  <div><span className="text-zinc-500">Impressions:</span> {selectedItem.performance!.impressions.toLocaleString()}</div>
-                                  <div><span className="text-zinc-500">Likes:</span> {selectedItem.performance!.likes.toLocaleString()}</div>
-                                  <div><span className="text-zinc-500">Comments:</span> {selectedItem.performance!.comments.toLocaleString()}</div>
+                              <div className="flex items-center gap-4 justify-between bg-zinc-900/10 border border-zinc-800/20 p-3 rounded-xl text-xs font-mono text-zinc-300">
+                                <div className="flex gap-6">
+                                  <div><span className="text-zinc-500 font-semibold uppercase text-[9px] mr-1">Impressions:</span> {selectedItem.performance!.impressions.toLocaleString()}</div>
+                                  <div><span className="text-zinc-500 font-semibold uppercase text-[9px] mr-1">Likes:</span> {selectedItem.performance!.likes.toLocaleString()}</div>
+                                  <div><span className="text-zinc-500 font-semibold uppercase text-[9px] mr-1">Comments:</span> {selectedItem.performance!.comments.toLocaleString()}</div>
                                 </div>
                                 <div className="flex gap-3">
                                   <button
@@ -685,7 +714,7 @@ export default function Home() {
                                   </button>
                                   <button
                                     onClick={() => handleDeleteArchive(selectedItem.id)}
-                                    className="text-[10px] text-rose-400 hover:underline cursor-pointer border-0 bg-transparent font-bold"
+                                    className="text-[10px] text-rose-400 hover:text-rose-300 cursor-pointer border-0 bg-transparent font-bold"
                                   >
                                     [Delete]
                                   </button>
@@ -696,7 +725,7 @@ export default function Home() {
                                 <span>No performance metrics recorded for this publication yet. Record them once published to feed the self-improving RAG database.</span>
                                 <button
                                   onClick={() => handleDeleteArchive(selectedItem.id)}
-                                  className="text-[10px] text-rose-400 hover:underline cursor-pointer border-0 bg-transparent font-bold"
+                                  className="text-[10px] text-rose-400 hover:text-rose-300 cursor-pointer border-0 bg-transparent font-bold ml-2"
                                 >
                                   [Delete Publication]
                                 </button>
@@ -709,7 +738,7 @@ export default function Home() {
                     );
                   })()
                 ) : (
-                  /* Workspace Dashboard Overview! */
+                  /* Workspace Dashboard Overview Bento style */
                   (() => {
                     const totalPubs = archive.length;
                     const totalImpressions = archive.reduce((sum, item) => sum + (item.performance?.impressions || 0), 0);
@@ -730,12 +759,12 @@ export default function Home() {
                       : "N/A";
 
                     return (
-                      <div className="flex flex-col gap-6 w-full animate-fade-up">
+                      <div className="flex flex-col gap-8 w-full animate-fade-up">
                         {/* Dashboard Header */}
                         <div className="flex justify-between items-center mb-2">
                           <div>
-                            <h2 className="text-xl font-medium tracking-tight text-white">Workspace Control Hub</h2>
-                            <p className="text-xs text-zinc-400 mt-1">Monitor content performance, inspect agent alignment, and manage publication history.</p>
+                            <h2 className="text-2xl font-semibold tracking-tight text-white">Workspace Studio</h2>
+                            <p className="text-xs text-zinc-400 mt-1">Review metrics, analyze critiques, and manage drafts in your publication history.</p>
                           </div>
                           <button
                             onClick={() => setActiveTab("new-publication")}
@@ -751,22 +780,22 @@ export default function Home() {
                           <div className="kpi-card glass-panel">
                             <span className="kpi-label">Total Publications</span>
                             <span className="kpi-value">{totalPubs}</span>
-                            <span className="kpi-meta">Saved in archive</span>
+                            <span className="kpi-meta text-[10px]">Saved in archive</span>
                           </div>
                           <div className="kpi-card glass-panel">
-                            <span className="kpi-label">Total Impressions</span>
+                            <span className="kpi-label">Impressions</span>
                             <span className="kpi-value">{totalImpressions.toLocaleString()}</span>
-                            <span className="kpi-meta">Recorded reach</span>
+                            <span className="kpi-meta text-[10px]">Recorded reach</span>
                           </div>
                           <div className="kpi-card glass-panel">
-                            <span className="kpi-label">Total Engagement</span>
+                            <span className="kpi-label">Engagement</span>
                             <span className="kpi-value">{totalEngagement.toLocaleString()}</span>
-                            <span className="kpi-meta">Likes & comments</span>
+                            <span className="kpi-meta text-[10px]">Likes & comments</span>
                           </div>
                           <div className="kpi-card glass-panel">
                             <span className="kpi-label">Avg Quality Score</span>
                             <span className="kpi-value">{avgQualityScore}</span>
-                            <span className="kpi-meta">Synthesized evaluation</span>
+                            <span className="kpi-meta text-[10px]">Strategist rating</span>
                           </div>
                         </div>
 
@@ -775,12 +804,12 @@ export default function Home() {
                           {/* Left: Saved Publications Grid (2/3 width) */}
                           <div className="dashboard-split-main flex flex-col gap-4">
                             <div className="flex justify-between items-center">
-                              <h3 className="text-sm font-semibold uppercase text-zinc-500 tracking-wider">Publications Catalog</h3>
+                              <h3 className="text-xs font-semibold uppercase text-zinc-500 tracking-wider">Publications Catalog</h3>
                               {totalPubs > 0 && <span className="text-xs text-zinc-500 font-mono">Showing {totalPubs} posts</span>}
                             </div>
 
                             {archive.length === 0 ? (
-                              <div className="glass-panel p-8 text-center text-zinc-500 text-xs flex flex-col items-center justify-center gap-3">
+                              <div className="glass-panel p-10 text-center text-zinc-500 text-xs flex flex-col items-center justify-center gap-4">
                                 <span>No publications generated yet. Ready to start your first draft?</span>
                                 <button
                                   onClick={() => setActiveTab("new-publication")}
@@ -807,10 +836,12 @@ export default function Home() {
                                         <span className="pub-card-title">{item.appName}</span>
                                         <span className="pub-card-date">{item.timestamp.split(",")[0]}</span>
                                       </div>
-                                      <p className="pub-card-desc">{item.description}</p>
+                                      <p className="pub-card-desc text-zinc-400">
+                                        {item.result?.best?.content || item.description}
+                                      </p>
                                       <div className="pub-card-footer">
-                                        <span className="custom-badge custom-badge-accent">
-                                          Style: {item.result?.best?.style || "Organic"}
+                                        <span className="custom-badge custom-badge-accent font-mono text-[9px] uppercase">
+                                          {item.result?.best?.style || "Organic"}
                                         </span>
                                         {hasPerformance ? (
                                           <div className="pub-card-metrics">
@@ -829,66 +860,80 @@ export default function Home() {
                           </div>
 
                           {/* Right: Quick Actions & Engine Status (1/3 width) */}
-                          <div className="dashboard-split-side flex flex-col gap-4">
-                            <h3 className="text-sm font-semibold uppercase text-zinc-500 tracking-wider">Engine Integration</h3>
-                            
-                            {/* API Key Checklist */}
-                            <div className="glass-panel flex flex-col gap-3 p-4">
-                              <span className="text-xs font-semibold text-zinc-300">API Gateway Status</span>
-                              <div className="flex flex-col gap-2 font-mono text-[10px]">
-                                <div className="flex justify-between items-center">
-                                  <span>Gemini API:</span>
-                                  <span className={apiKeys.gemini ? "text-emerald-400 font-bold" : "text-zinc-500"}>
-                                    {apiKeys.gemini ? "CONNECTED" : "MISSING"}
-                                  </span>
+                          <div className="dashboard-split-side flex flex-col gap-6">
+                            <div>
+                              <h3 className="text-xs font-semibold uppercase text-zinc-500 tracking-wider mb-4">Engine Integration</h3>
+                              <div className="flex flex-col gap-4">
+                                
+                                {/* API Key Checklist */}
+                                <div className="glass-panel flex flex-col gap-3 p-4">
+                                  <div className="flex items-center gap-2 text-zinc-300 font-semibold text-xs">
+                                    <Key size={14} className="text-zinc-400" />
+                                    <span>API Gateway Status</span>
+                                  </div>
+                                  <div className="flex flex-col gap-2 font-mono text-[10px] border-t border-zinc-800/40 pt-2.5">
+                                    <div className="flex justify-between items-center">
+                                      <span>Gemini API:</span>
+                                      <span className={apiKeys.gemini ? "text-emerald-400 font-bold" : "text-zinc-500"}>
+                                        {apiKeys.gemini ? "CONNECTED" : "MISSING"}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                      <span>OpenAI API:</span>
+                                      <span className={apiKeys.openai ? "text-emerald-400 font-bold" : "text-zinc-500"}>
+                                        {apiKeys.openai ? "CONNECTED" : "MISSING"}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                      <span>Anthropic API:</span>
+                                      <span className={apiKeys.anthropic ? "text-emerald-400 font-bold" : "text-zinc-500"}>
+                                        {apiKeys.anthropic ? "CONNECTED" : "MISSING"}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                      <span>OpenRouter:</span>
+                                      <span className={apiKeys.openrouter ? "text-emerald-400 font-bold" : "text-zinc-500"}>
+                                        {apiKeys.openrouter ? "CONNECTED" : "MISSING"}
+                                      </span>
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className="flex justify-between items-center">
-                                  <span>OpenAI API:</span>
-                                  <span className={apiKeys.openai ? "text-emerald-400 font-bold" : "text-zinc-500"}>
-                                    {apiKeys.openai ? "CONNECTED" : "MISSING"}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                  <span>Anthropic API:</span>
-                                  <span className={apiKeys.anthropic ? "text-emerald-400 font-bold" : "text-zinc-500"}>
-                                    {apiKeys.anthropic ? "CONNECTED" : "MISSING"}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                  <span>OpenRouter:</span>
-                                  <span className={apiKeys.openrouter ? "text-emerald-400 font-bold" : "text-zinc-500"}>
-                                    {apiKeys.openrouter ? "CONNECTED" : "MISSING"}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
 
-                            {/* RAG Context Card */}
-                            <div className="glass-panel flex flex-col gap-3 p-4">
-                              <span className="text-xs font-semibold text-zinc-300">Database Context (RAG)</span>
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="text-zinc-400">Feedback Loop database:</span>
-                                <span className={preferences.enableRAG ? "text-emerald-400 font-bold" : "text-zinc-500"}>
-                                  {preferences.enableRAG ? "ACTIVE" : "DISABLED"}
-                                </span>
-                              </div>
-                              <p className="text-[10px] text-zinc-500 leading-normal">
-                                {preferences.enableRAG 
-                                  ? "Synthesis will dynamically query historical publication parameters and performance metrics to align generation hooks." 
-                                  : "RAG query is disabled. Standard templates will be used for synthesis context."}
-                              </p>
-                            </div>
+                                {/* RAG Context Card */}
+                                <div className="glass-panel flex flex-col gap-3 p-4">
+                                  <div className="flex items-center gap-2 text-zinc-300 font-semibold text-xs">
+                                    <Database size={14} className="text-zinc-400" />
+                                    <span>Database Context (RAG)</span>
+                                  </div>
+                                  <div className="flex items-center justify-between text-xs border-t border-zinc-800/40 pt-2.5">
+                                    <span className="text-zinc-400">Feedback Loop database:</span>
+                                    <span className={preferences.enableRAG ? "text-emerald-400 font-bold" : "text-zinc-500"}>
+                                      {preferences.enableRAG ? "ACTIVE" : "DISABLED"}
+                                    </span>
+                                  </div>
+                                  <p className="text-[10px] text-zinc-500 leading-relaxed">
+                                    {preferences.enableRAG 
+                                      ? "Synthesis will dynamically query historical publication parameters and performance metrics to align generation hooks." 
+                                      : "RAG query is disabled. Standard templates will be used for synthesis context."}
+                                  </p>
+                                </div>
 
-                            {/* Quick Launch Panel */}
-                            <div className="glass-panel flex flex-col gap-3 p-4">
-                              <span className="text-xs font-semibold text-zinc-300">Console Management</span>
-                              <button
-                                onClick={() => setIsSettingsOpen(true)}
-                                className="custom-btn custom-btn-secondary text-[11px] w-full py-2 flex items-center justify-center gap-1.5"
-                              >
-                                <Sliders size={12} />
-                                <span>Aesthetic Configurations</span>
-                              </button>
+                                {/* Quick Launch Panel */}
+                                <div className="glass-panel flex flex-col gap-3 p-4">
+                                  <div className="flex items-center gap-2 text-zinc-300 font-semibold text-xs">
+                                    <Terminal size={14} className="text-zinc-400" />
+                                    <span>Console Management</span>
+                                  </div>
+                                  <button
+                                    onClick={() => setIsSettingsOpen(true)}
+                                    className="custom-btn custom-btn-secondary text-[11px] w-full py-2.5 flex items-center justify-center gap-1.5"
+                                  >
+                                    <Sliders size={12} />
+                                    <span>Aesthetic Configurations</span>
+                                  </button>
+                                </div>
+
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -902,10 +947,10 @@ export default function Home() {
             {activeTab === "new-publication" && (
               <motion.div
                 key="new-publication"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
                 className="w-full flex flex-col gap-6"
               >
                 <PostGeneratorForm
@@ -925,10 +970,10 @@ export default function Home() {
             {activeTab === "agents" && (
               <motion.div
                 key="agents"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
                 className="w-full"
               >
                 <AgentPlayground
