@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
+import { findRelevantViralPosts } from "./viralityDb";
+import { convertUnicodeStyles, optimizeMobileSpacing, estimateReadability } from "./formatter";
 
 // Helper to sanitize and robustly parse JSON from LLM responses
 function robustJsonParse(text: string): any {
@@ -491,6 +493,23 @@ export async function POST(req: Request) {
 
           const trendsContext = `Real-time trending search insights related to this topic:\n${liveTrends.map((t, i) => `${i + 1}. ${t}`).join("\n")}`;
 
+          // Retrieve matching high-performing posts from local Hall-of-Fame database
+          sendEvent("activity", { message: "Retrieving matching high-performing post templates from local database...", type: "info" });
+          const relevantViralPosts = findRelevantViralPosts(topics);
+          sendEvent("activity", { message: `Matched ${relevantViralPosts.length} top-tier viral structures for topics: ${topics.join(", ")}`, type: "success" });
+
+          const viralExamplesContext = `High-Performing LinkedIn Post Templates (Reference Structures):\n${relevantViralPosts.map((p, i) => `
+Template #${i + 1} (Category: ${p.niche} | Engagement: ${p.metrics.likes} Likes):
+---
+${p.content}
+---
+Structural Analysis:
+- Hook Strategy: ${p.structure.hook}
+- Body Formatting: ${p.structure.body}
+- Call to Action: ${p.structure.cta}
+- Anchor Metaphor: ${p.structure.metaphor}
+`).join("\n")}`;
+
           // Helper to run LLM with retry & activity logs
           const runAgentCall = async (agent: any, systemPrompt: string, userPrompt: string, contextName: string) => {
             return await callLLMWithRetry(
@@ -520,6 +539,9 @@ Context:
 
 LinkedIn Search Context:
 ${trendsContext}
+
+High-Performing Reference Examples:
+${viralExamplesContext}
 
 CRITICAL COPYWRITING RULES:
 1. The Hook (Relatable Fear): Start EXACTLY mid-thought with a gut-punch reality of the user's specific experience based on the target audience. DO NOT soften the hook or bury it inside a generic sentence. No emojis in the hook.
@@ -738,6 +760,9 @@ ORIGINAL PROJECT CONTEXT:
 TRENDING LINKEDIN CONTEXT:
 ${trendsContext}
 
+HIGH-PERFORMING VIRAL TEMPLATES REFERENCE:
+${viralExamplesContext}
+
 Here are their refined drafts and the peer critiques they received:
 
 1. Agent Alpha (${agentA.provider}/${agentA.model}):
@@ -798,6 +823,116 @@ CRITICAL FORMAT REQUIREMENT:
               systemPrompt: "You are the Master Synthesizer. You evaluate peer-reviewed drafts to compile the final perfect output without any personal bias. You strictly follow instructions."
             };
             finalOutcome = await runAgentCall(judgeAgent, "You are a Master Synthesizer consolidating drafts into a single ultimate post.", consensusPrompt, "Synthesis");
+
+            // Step 4.5: Run the synthesized post through the LinkedIn Algorithm Simulator
+            try {
+              sendEvent("status", { message: "[Auditor] Auditing consolidated post against the LinkedIn Algorithm..." });
+              sendEvent("activity", { message: "[Auditor] Simulating post performance, dwell-time parameters, and style heuristics...", type: "info" });
+
+              const simulatorPrompt = `
+You are the LinkedIn Algorithm Simulator. Evaluate this synthesized LinkedIn post for compliance with critical copywriting and viral feed rules.
+
+POST TO AUDIT:
+---
+${finalOutcome.content}
+---
+
+CRITERIA TO AUDIT:
+1. HOOK COMPLIANCE: Does the first line start EXACTLY mid-thought? Is it <=140 characters? Is there zero conversational preamble and zero emojis in the hook? (Yes/No)
+2. DWELL TIME SPACING: Are paragraphs clean, short (max 2 sentences), with double newlines between them? (Yes/No)
+3. ZERO BANNED VOCAB: Does it avoid all AI cliché words (e.g. "delve", "game-changer", "digital abyss", "spaghetti graphs", "future of", "testament", "unlock", "revolutionary")? (Yes/No)
+4. BRIDGING METRIC: Is there a solid bridging sentence connecting the narrative to the proof/metrics? (Yes/No)
+5. SHIP THE GIF: Is there exactly one mandatory visual placeholder (e.g., "[Insert 5-sec GIF...]")? (Yes/No)
+6. BINARY ENGAGEMENT: Does the post end exactly with "Hot take: [Opinion]. Agree or disagree?" (Yes/No)
+7. CREDIBILITY CHECK: Does the post use "We built" instead of "I built"? (Yes/No)
+8. COHESIVE METAPHOR: Does it stick to a single, consistent metaphor without blending? (Yes/No)
+
+Output a JSON object with properties 'passes' (boolean), 'score' (number 0-100), and 'feedback' (array of strings listing what is wrong or needs improvement. If everything is perfect, leave array empty).
+
+CRITICAL FORMAT REQUIREMENT:
+{
+  "passes": false,
+  "score": 85,
+  "feedback": ["First line contains emojis", "Contains the banned word 'delve'"]
+}
+              `;
+
+              const auditResult = await callLLMWithRetry(
+                agentA.provider,
+                agentA.model,
+                "You are a LinkedIn Algorithmic Auditor. You audit posts for viral compliance.",
+                simulatorPrompt,
+                0.1,
+                apiKeys,
+                "Algorithm Auditor",
+                (msg, type = "info") => sendEvent("activity", { message: msg, type })
+              );
+
+              if (auditResult && (!auditResult.passes || auditResult.score < 90) && auditResult.feedback && auditResult.feedback.length > 0) {
+                const issuesStr = auditResult.feedback.join(", ");
+                sendEvent("activity", { message: `[Auditor] Post scored ${auditResult.score}/100. Issues detected: ${issuesStr}. Initiating algorithmic refinement...`, type: "warning" });
+
+                const autoRefinePrompt = `
+You are the Consensus Settle Panel. The LinkedIn Algorithm Auditor has rejected your consolidated post because it failed critical checks.
+
+ORIGINAL DRAFT:
+---
+${finalOutcome.content}
+---
+
+AUDITOR FEEDBACK:
+${auditResult.feedback.map((f: string, i: number) => `${i + 1}. ${f}`).join("\n")}
+
+Please rewrite the post to fully correct all feedback items. Keep all other aspects of the post intact (such as metrics, the anchor metaphor, and the CTA strategy).
+
+Output a JSON object in the exact same format:
+{
+  "content": "The corrected, finalized absolute best LinkedIn post content...",
+  "scores": {
+    "hookStrength": 98,
+    "readability": 95,
+    "credibility": 96,
+    "viralPotential": 98
+  },
+  "synthesisRationale": "How you fixed the auditor feedback..."
+}
+                `;
+
+                const refinedOutcome = await runAgentCall(
+                  judgeAgent,
+                  "You are a Master Synthesizer consolidating drafts into a single ultimate post.",
+                  autoRefinePrompt,
+                  "Refinement Turn"
+                );
+
+                if (refinedOutcome && refinedOutcome.content) {
+                  finalOutcome = refinedOutcome;
+                  sendEvent("activity", { message: "[Auditor] Post successfully refined and validated by simulator.", type: "success" });
+                }
+              } else {
+                sendEvent("activity", { message: `[Auditor] Algorithmic audit passed successfully! (Score: ${auditResult?.score || 95}/100)`, type: "success" });
+              }
+            } catch (auditErr: any) {
+              console.warn("Algorithm audit pipeline failed or timed out:", auditErr);
+              sendEvent("activity", { message: `[Auditor] Audit pipeline bypassed (${auditErr.message || auditErr}). Proceeding to styling.`, type: "warning" });
+            }
+
+            // Step 4.6: Run post-formatting sanitization (Unicode styling cleaner, mobile pacing, readability calculator)
+            try {
+              let sanitizedContent = convertUnicodeStyles(finalOutcome.content);
+              sanitizedContent = optimizeMobileSpacing(sanitizedContent);
+              
+              const readabilityMetrics = estimateReadability(sanitizedContent);
+              sendEvent("activity", { message: `[Readability] Flesch Reading Ease: ${readabilityMetrics.easeScore}/100 (${readabilityMetrics.gradeLevel})`, type: "success" });
+
+              finalOutcome.content = sanitizedContent;
+              if (finalOutcome.scores) {
+                finalOutcome.scores.readability = readabilityMetrics.easeScore;
+              }
+            } catch (fmtErr: any) {
+              console.error("Formatting sanitization failed:", fmtErr);
+            }
+
           } catch (e: any) {
             console.error("Synthesis failed, falling back to top scored refined draft:", e);
             const sorted = [

@@ -1,86 +1,86 @@
-# Virality Mapper - 3-Agent LinkedIn Debate Arena 🚀
+# Virality Mapper — Multi-Agent LinkedIn Debate Arena & Master Synthesizer 🚀
 
-   An advanced, premium multi-agent LinkedIn post workspace inspired by collaborative human brainstorming. Instead of using pre-defined static personas with a simple single-pass Judge, the system runs **three specialist copywriting agents** concurrently, exposes their drafts to a **bidirectional peer review critique arena**, refines the posts using peer feedback, and synthesizes the absolute best possible viral outcome grounded by **real-time LinkedIn search trends**.
+An advanced, premium multi-agent workspace designed to generate high-performing, viral LinkedIn posts. Instead of relying on single-pass AI prompts that yield generic, robotic copy, **Virality Mapper** runs a dynamic **3-Agent Copywriting Panel**, subjects their drafts to a **bidirectional peer review critique arena**, refines the content recursively, and synthesizes the ultimate post under the guidance of an **unbiased Master Synthesizer**—grounded in real-time, regional LinkedIn search trends.
 
 ---
 
 ## 🏗️ System Architecture & Debate Flow
 
-The core of Virality Mapper is its multi-phase consensus and debate architecture, which mimics a high-performance marketing brainstorm:
+The core of Virality Mapper is its multi-phase consensus and debate pipeline, which models a high-performance marketing brainstorming session:
 
 ```mermaid
 graph TD
-    A[User Inputs appName, description, tone] --> B[Dynamic Topic Analyzer]
-    B -->|Extracts 2-3 Broad Niche Topics| C[Parallel Regional Scraper]
-    C -->|Targeting India site:linkedin.com &kl=in-en| D[Live Trends Context]
+    A[User Inputs: appName, description, targetAudience, tone] --> B[Dynamic Topic Analyzer]
+    B -->|Extracts 2-3 Broad Industry Keywords| C[Resilient Regional Scraper]
+    C -->|Yahoo Search & DuckDuckGo Fallbacks with Recency Filters| D[Real-Time Trend Context]
     
-    D --> E[Phase 1: Concurrent Drafting]
+    D --> E[Phase 1: Concurrent Copywriting]
     E --> E1[Agent Alpha: Hook & Structure]
     E --> E2[Agent Beta: Analytical & Metrics]
     E --> E3[Agent Gamma: Narrative & Story]
     
     E1 & E2 & E3 --> F[Phase 2: Bidirectional Peer Critique Arena]
     
-    F -->|1 -> 2| F12[Alpha critiques Beta]
-    F -->|2 -> 1| F21[Beta critiques Alpha]
-    F -->|2 -> 3| F23[Beta critiques Gamma]
-    F -->|3 -> 2| F32[Gamma critiques Beta]
-    F -->|1 -> 3| F13[Alpha critiques Gamma]
-    F -->|3 -> 1| F31[Gamma critiques Alpha]
+    F -->|Alpha critiques Beta/Gamma| F1[Alpha Critiques]
+    F -->|Beta critiques Alpha/Gamma| F2[Beta Critiques]
+    F -->|Gamma critiques Alpha/Beta| F3[Gamma Critiques]
     
-    F12 & F21 & F23 & F32 & F13 & F31 --> G[Phase 3: Concurrent Refinement]
-    G --> G1[Agent Alpha rewrites post using Beta/Gamma critiques]
-    G --> G2[Agent Beta rewrites post using Alpha/Gamma critiques]
-    G --> G3[Agent Gamma rewrites post using Alpha/Beta critiques]
+    F1 & F2 & F3 --> G[Phase 3: Recursive Refinement]
+    G --> G1[Alpha rewrites draft via Beta/Gamma critiques]
+    G --> G2[Beta rewrites draft via Alpha/Gamma critiques]
+    G --> G3[Gamma rewrites draft via Alpha/Beta critiques]
     
     G1 & G2 & G3 --> H[Phase 4: Consensus Settle Panel]
-    H --> I[Synthesized Ultimate Post & Rationale]
+    H -->|Unbiased Judge & Quality Checks| I[Consolidated Master Post & Multi-Axis Scoring]
 ```
 
-### Phase 1: Real-Time Trend Grounding & Drafting
-- **Dynamic Topic Analyzer**: Automatically parses user inputs (`appName`, `description`, `targetAudience`) using an LLM model before running search queries. It extracts 2-3 broader, high-volume industry keywords/niche topics, ensuring that brand-new projects still find highly relevant, active post contexts.
-- **Resilient Multi-Engine Trend Scraper**: Runs a multi-stage regional scraper pipeline to fetch relevant post structures from India (`site:linkedin.com`). It queries **Yahoo Search** as the primary engine (due to permissive bot policies), falling back sequentially to **DuckDuckGo Lite** and **DuckDuckGo HTML Search** (with strict 200 status checks) to ensure high availability of live data.
-- **Drafting**: The live search trends are aggregated, deduplicated, and injected into the copywriters' environment. The three specialist agents generate their initial drafts sequentially (one by one) to avoid rate limits:
-  - **Agent Alpha (Hook & Structure)**: Specializes in scroll-stopping pattern-interrupt hooks, crisp visual breaks, and maximized CTR.
-  - **Agent Beta (Analytical & Metrics)**: Focuses on checklists, bold numbers, clear business metrics, and raw value.
+### Phase 1: Topic Extraction, Recency Scraping & Initial Drafting
+- **Dynamic Topic Analyzer**: Parses the user's project info (`appName`, `description`, `targetAudience`) using an LLM. It extracts 2-3 broader, high-volume industry keywords rather than relying on hyper-specific project names.
+- **Resilient Trend Scraper**: Querying `site:linkedin.com` using the current year dynamically (`new Date().getFullYear()`), the scraper pulls snippets of live posts.
+  - **Recency Filters**: Targets fresh content using strict filters (`age=1m` on Yahoo Search, `df=m` on DuckDuckGo Lite & DuckDuckGo HTML) to guarantee search results match the current trend landscape.
+  - **Fallback Chain**: Queries Yahoo Search as the primary provider (highly stable), falling back to DuckDuckGo Lite, and then standard DuckDuckGo HTML search if blocked or timed out.
+- **Concurrent Copywriting**: The live search context is injected into the copywriting environment. Three specialist agents generate their initial drafts sequentially:
+  - **Agent Alpha (Hook & Structure)**: Specializes in scroll-stopping pattern-interrupt hooks, crisp visual breaks, and maximized click-through rate (CTR).
+  - **Agent Beta (Analytical & Metrics)**: Focuses on checklists, bold numbers, clear business metrics, and raw educational value.
   - **Agent Gamma (Narrative & Story)**: Employs the hero's journey, lessons learned, and brand vulnerability.
 
 ### Phase 2: Bidirectional Peer Critique Arena
 Rather than selecting a draft immediately, the three agents enter a bidirectional critique loop where each agent acts as a reviewer for both of their peers:
-1. **Agent Alpha** evaluates and critiques **Agent Beta** (1 → 2) and **Agent Gamma** (1 → 3).
-2. **Agent Beta** evaluates and critiques **Agent Alpha** (2 → 1) and **Agent Gamma** (2 → 3).
-3. **Agent Gamma** evaluates and critiques **Agent Alpha** (3 → 1) and **Agent Beta** (3 → 2).
+- **Agent Alpha** reviews and critiques **Agent Beta** and **Agent Gamma**.
+- **Agent Beta** reviews and critiques **Agent Alpha** and **Agent Gamma**.
+- **Agent Gamma** reviews and critiques **Agent Alpha** and **Agent Beta**.
 
-Each review scores the draft out of 100 and outlines structural, metric-based, or storytelling critiques.
+Each peer critique rates the copy out of 100 and outlines structural, metric-based, or storytelling recommendations.
 
-### Phase 3: Refinement Cycle
-Each agent receives the evaluations from their two peers and refines their original post to implement suggested updates, outputting their revised post alongside a change log argument explaining their edits.
+### Phase 3: Recursive Refinement Cycle
+Each agent receives their specific critiques and refines their original post to implement suggested updates, returning the updated post along with a change log argument explaining their edits.
 
-### Phase 4: Consensus Settle Panel
-The 3 refined drafts, their critique histories, and self-change arguments are consolidated in a final consensus call. The panel acts as a master editor, combining the best pattern-interrupt hooks, metric sections, and narrative sequences into a single copy-ready post.
+### Phase 4: Consensus Settle Panel (Master Synthesizer)
+The 3 refined drafts, their critique histories, and self-change arguments are consolidated in a final consensus call:
+- **Unbiased Judge**: A dedicated judge agent merges the absolute best parts of the drafts (e.g. Agent Alpha's hook, Agent Beta's value list, Agent Gamma's storytelling arc).
+- **Strict Quality Checks**: Enforces copywriting guidelines (under 1200 chars, no abstract fluff like "game-changing" or "digital abyss", exact binary question ending, bridging sentences before metrics, cohesive single metaphors).
+- **Multi-Axis Performance Score**: Automatically computes individual ratings for **Hook Strength**, **Readability**, **Credibility**, and **Viral Potential** which are dynamically rendered in the UI.
 
 ---
 
 ## ✨ Key Features
 
-- **Live Trend Grounding**: Automatically extracts real-time professional hooks and trending structures from LinkedIn posts via a multi-engine scraper pipeline (Yahoo Search primary, with DuckDuckGo Lite & HTML search fallbacks).
-- **Dynamic Model Selection**: Connect credentials and dynamically retrieve active model lists from various providers.
-- **Configurable LLM Timeouts**: Built-in timeout mechanism of 30 seconds default per model request, easily adjustable in `app/api/generate/route.ts` via the `LLM_TIMEOUT_MS` constant.
-- **Persistent Post Archive**: Saves all generated runs locally inside your browser's `localStorage`. Review previous generations, browse drafts and peer review ratings, or delete old entries in a clean split-pane history viewer.
-- **Stable Tab State Memory**: Navigating between Workspace, Settings, and Agents tabs keeps the generation state, stream readers, and typewriter animations running smoothly in the background without unmounting.
-- **Live System Activity logs & Stopwatch**: Exposes an interactive Stopwatch elapsed timer and a dark monospace logs feed. Tracks scraper actions, prompt details, api query durations, quota limits, and automatic exponential backoff retries.
-- **Debate Customization**: Configure custom prompts, temperature values, models, and endpoints for each of the three copywriting agents individually.
-- **Diverse LLM Providers**: Support for Google Gemini, OpenAI, Anthropic, OpenRouter, local models (Ollama, LM Studio), and custom API proxies.
-- **In-App Credentials Manager**: Store API keys securely in `localStorage` (never shared with a backend or database).
-- **Interactive Timeline Logs**: Toggle tabs to explore the inner mechanics of the debate: initial drafts, bidirectional critique score sheets, refined drafts, and consolidated outputs.
-- **Vercel-Inspired Minimalist UI**: Typographic dark theme focusing on precise whitespace, clean monospace grids, and micro-interactions.
+- **Live Search Grounding**: Automatically extracts real-time professional hooks and trending structures from LinkedIn posts via a multi-engine scraper pipeline (Yahoo Search primary, DuckDuckGo Lite & HTML fallbacks) with strict monthly recency filters implemented in [app/api/generate/route.ts](file:///c:/Users/dasan/Documents/GitHub/Virality-Mapper/app/api/generate/route.ts).
+- **Multi-Axis Scoring System**: Receives 4-axis performance metrics (Hook Strength, Readability, Credibility, Viral Potential) for the final consolidated post, rendered through visual score meters in [ResultsDisplay.tsx](file:///c:/Users/dasan/Documents/GitHub/Virality-Mapper/components/ResultsDisplay.tsx).
+- **Persistent Credentials & Configurations**: All LLM API keys (`vm_api_keys`) and custom agent settings (`vm_agents_config`) are saved locally in the browser's `localStorage` via [SettingsTab.tsx](file:///c:/Users/dasan/Documents/GitHub/Virality-Mapper/components/SettingsTab.tsx) and [page.tsx](file:///c:/Users/dasan/Documents/GitHub/Virality-Mapper/app/page.tsx). No keys are reset or wiped on page refresh, and no credentials ever touch a database.
+- **Configurable LLM Timeouts**: Adjust standard API timeouts (default 30 seconds) via the `LLM_TIMEOUT_MS` constant in [app/api/generate/route.ts](file:///c:/Users/dasan/Documents/GitHub/Virality-Mapper/app/api/generate/route.ts#L321).
+- **Interactive Archive Viewer**: Save generation runs to local storage, review previous runs, navigate critique logs, and inspect agent score sheets in a split-pane interface in [PostGeneratorForm.tsx](file:///c:/Users/dasan/Documents/GitHub/Virality-Mapper/components/PostGeneratorForm.tsx).
+- **Stable Tab State Memory**: Navigating between Workspace, Settings, and Agents tabs keeps the current generation state, active stream readers, and typewriter animations running smoothly in the background without unmounting.
+- **Monospace Console & Stopwatch Logs**: Real-time logs panel showing crawler actions, model requests, and backoff retries, alongside a live Stopwatch tracking generation duration.
+- **Flexible Provider Integrations**: Out-of-the-box support for Google Gemini, OpenAI, Anthropic, OpenRouter, local models (Ollama, LM Studio), and custom API proxies.
+- **Premium UI/UX Design**: Modern, glassmorphic dark-theme design featuring premium typography (Google Fonts Inter/Outfit), subtle hover effects, responsive layout grids, and smooth scrolling powered by `lenis` and [LenisProvider.tsx](file:///c:/Users/dasan/Documents/GitHub/Virality-Mapper/components/LenisProvider.tsx).
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: Next.js (App Router), React, Lucide Icons, Vanilla CSS (Geist typographic style system)
-- **Backend**: Next.js API Routes, dynamic LLM proxy integrations (`@google/genai`, `@anthropic-ai/sdk`, `openai`)
+- **Frontend**: Next.js (App Router) in [app/page.tsx](file:///c:/Users/dasan/Documents/GitHub/Virality-Mapper/app/page.tsx), React 19, Lucide Icons, Framer Motion, Lenis (Fluid Smooth Scroll), Vanilla CSS (Geist typographic styling in [app/globals.css](file:///c:/Users/dasan/Documents/GitHub/Virality-Mapper/app/globals.css))
+- **Backend/API**: Next.js API Routes (Server-Sent Events streaming) in [app/api/generate/route.ts](file:///c:/Users/dasan/Documents/GitHub/Virality-Mapper/app/api/generate/route.ts), dynamic LLM proxies (`@google/genai`, `@anthropic-ai/sdk`, `openai`)
 
 ---
 
@@ -108,13 +108,9 @@ The 3 refined drafts, their critique histories, and self-change arguments are co
 
 ---
 
-## 🧠 How to Use the App
+## 🧠 Workspace Guide
 
-1. **Configure Credentials**: 
-   Go to the **Settings** tab in the sidebar and enter your API keys (Gemini, OpenAI, etc.). Use the **Test** button to verify the connection is successful.
-2. **Customize Agents**: 
-   Go to the **Agent Playground** tab to configure your 3 debate agents. Adjust their temperature values, assign different provider endpoints, or modify their system prompt guidelines.
-3. **Draft & Trigger Arena**: 
-   Go to the **Workspace** tab, input your project details (name, description, target audience, writing tone), and click **Run 3-Agent Debate Arena**.
-4. **Inspect the Arena**: 
-   Watch the live debate flow compile. Once complete, copy the finalized Consolidated Master Post, and browse through the **Debate Arena Logs** tab panels to see exactly how your post was argued and refined!
+1. **Setup Credentials**: Go to the **Settings** tab and enter your LLM API keys. Use the **Test Connection** button to query available models from each provider and verify connection stability.
+2. **Configure Copywriters**: Use the **Agent Playground** tab to fine-tune copywriter temperatures, change models, or update core copywriter system prompts.
+3. **Execute the Arena**: In the **Workspace** tab, fill out your project details (name, description, target audience, tone) and click **Run 3-Agent Debate Arena**.
+4. **Inspect & Tweak**: Track the live logs and watch the workspace compile initial drafts, peer review cards, refined drafts, and the final synthesized copy. Copy the consolidated copy-ready master post directly from the workspace!
