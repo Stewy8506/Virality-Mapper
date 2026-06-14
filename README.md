@@ -1,6 +1,10 @@
 # Virality Mapper — Multi-Agent LinkedIn Debate Arena & Master Synthesizer 🚀
 
-An advanced, premium multi-agent workspace designed to generate high-performing, viral LinkedIn posts. Instead of relying on single-pass AI prompts that yield generic, robotic copy, **Virality Mapper** runs a dynamic **3-Agent Copywriting Panel**, subjects their drafts to a **bidirectional peer review critique arena**, refines the content recursively, and synthesizes the ultimate post under the guidance of an **unbiased Master Synthesizer**—grounded in real-time, regional LinkedIn search trends.
+An advanced, premium multi-agent workspace designed to generate high-performing, viral LinkedIn posts. Instead of relying on single-pass AI prompts that yield generic, robotic copy, **Virality Mapper** runs a dynamic **3-Agent Copywriting Panel**, subjects their drafts to a **bidirectional peer review critique arena**, refines the content recursively, and synthesizes the ultimate post under the guidance of an **unbiased Master Synthesizer**—grounded in real-time LinkedIn search trends.
+
+The application is structured as a two-stage routing architecture:
+1. **`/` (Landing Page)**: An award-worthy, minimalist, and typographic showcase featuring interactive A/B visualizers, stepper pipelines, and layout transitions.
+2. **`/workspace` (Workspace Studio)**: The full client-side copywriting studio housing editor panels, history search logs, agent temperature controllers, and settings.
 
 ---
 
@@ -36,7 +40,7 @@ graph TD
 
 ### Phase 1: Topic Extraction, Recency Scraping & Initial Drafting
 - **Dynamic Topic Analyzer**: Parses the user's project info (`appName`, `description`, `targetAudience`) using an LLM. It extracts 2-3 broader, high-volume industry keywords rather than relying on hyper-specific project names.
-- **Resilient Trend Scraper**: Querying `site:linkedin.com` using the current year dynamically (`new Date().getFullYear()`), the scraper pulls snippets of live posts.
+- **Resilient Trend Scraper**: Querying `site:linkedin.com` using the current year dynamically, the scraper pulls snippets of live posts.
   - **Recency Filters**: Targets fresh content using strict filters (`age=1m` on Yahoo Search, `df=m` on DuckDuckGo Lite & DuckDuckGo HTML) to guarantee search results match the current trend landscape.
   - **Fallback Chain**: Queries Yahoo Search as the primary provider (highly stable), falling back to DuckDuckGo Lite, and then standard DuckDuckGo HTML search if blocked or timed out.
 - **Concurrent Copywriting**: The live search context is injected into the copywriting environment. Three specialist agents generate their initial drafts sequentially:
@@ -66,25 +70,26 @@ The 3 refined drafts, their critique histories, and self-change arguments are co
 
 ## ✨ Key Features
 
-- **Live & Organic Search Grounding**: Automatically extracts real-time professional hooks and trending structures from LinkedIn posts via a multi-engine scraper pipeline (Yahoo Search primary, DuckDuckGo Lite & HTML fallbacks) with strict monthly recency filters. If a **SerpApi key** is configured, queries Google Search organically with strict monthly filters (`tbs=qdr:m`) to bypass scrapers.
+- **Typographic & Minimalist Entry Page**: A root landing page built in [app/page.tsx](file:///Users/anv./Documents/Virality%20Mapper/app/page.tsx) with elegant micro-animations (Framer Motion and CSS transitions), visual A/B Raw vs Consensus comparisons, and ruled layout guides.
+- **Live & Organic Search Grounding**: Automatically extracts real-time professional hooks and trending structures from LinkedIn posts via a multi-engine scraper pipeline (Yahoo Search primary, DuckDuckGo Lite & HTML fallbacks) with monthly recency filters. If a **SerpApi key** is configured, queries Google Search organically with monthly filters (`tbs=qdr:m`) to bypass scrapers.
 - **Neuromarketing Hook Archetypes**: Select dropdown to target specific copywriting angles: *Contrarian Interrupt* (shock & debunk), *Vulnerable Disclosure* (failure & trust), *High-Value Stash* (resources & curation), and *Threat & Fear* (operational risk).
-- **AI Target Audience Focus Group**: Runs simulated evaluations across 4 professional profiles to audit and score scroll-stopping, commenting probability, and virality share rates before final publication.
+- **AI Target Audience Focus Group**: Runs simulated reviews across 4 professional profiles to audit and score scroll-stopping, commenting probability, and virality share rates before final publication.
 - **Self-Improving RAG Analytics Loop**: Record actual views, likes, and comments for published posts in the Archive pane. The system automatically extracts these success stories and prepends them as top-priority few-shot reference templates for future generations.
-- **Multi-Axis Scoring System**: Receives 4-axis performance metrics (Hook Strength, Readability, Credibility, Viral Potential) for the final consolidated post, rendered through visual score meters in [ResultsDisplay.tsx](file:///c:/Users/dasan/Documents/GitHub/Virality-Mapper/components/ResultsDisplay.tsx).
-- **Persistent Credentials & Configurations**: All LLM API keys (`vm_api_keys`) and custom agent settings (`vm_agents_config`) are saved locally in the browser's `localStorage` via [SettingsTab.tsx](file:///c:/Users/dasan/Documents/GitHub/Virality-Mapper/components/SettingsTab.tsx) and [page.tsx](file:///c:/Users/dasan/Documents/GitHub/Virality-Mapper/app/page.tsx). No keys are reset or wiped on page refresh, and no credentials ever touch a database.
-- **Configurable LLM Timeouts**: Adjust standard API timeouts (default 30 seconds) via the `LLM_TIMEOUT_MS` constant in [app/api/generate/route.ts](file:///c:/Users/dasan/Documents/GitHub/Virality-Mapper/app/api/generate/route.ts#L321).
-- **Interactive Archive Viewer**: Save generation runs to local storage, review previous runs, navigate critique logs, and inspect agent score sheets in a split-pane interface in [PostGeneratorForm.tsx](file:///c:/Users/dasan/Documents/GitHub/Virality-Mapper/components/PostGeneratorForm.tsx).
+- **Multi-Axis Scoring System**: Receives 4-axis performance metrics (Hook Strength, Readability, Credibility, Viral Potential) for the final consolidated post, rendered through visual score meters in [components/ResultsDisplay.tsx](file:///Users/anv./Documents/Virality%20Mapper/components/ResultsDisplay.tsx).
+- **Persistent Credentials & Configurations**: All LLM API keys (`vm_api_keys`) and agent settings (`vm_agents_config`) are saved locally in the browser's `localStorage` via [components/SettingsTab.tsx](file:///Users/anv./Documents/Virality%20Mapper/components/SettingsTab.tsx) and [app/workspace/page.tsx](file:///Users/anv./Documents/Virality%20Mapper/app/workspace/page.tsx). No keys are reset or wiped on page refresh, and no credentials ever touch a database.
+- **Configurable LLM Timeouts**: Adjust standard API timeouts (default 30 seconds) via the `LLM_TIMEOUT_MS` constant in [app/api/generate/route.ts](file:///Users/anv./Documents/Virality%20Mapper/app/api/generate/route.ts).
+- **Interactive Archive Viewer**: Save generation runs to local storage, review previous runs, navigate critique logs, and inspect agent score sheets in a split-pane interface in [components/PostGeneratorForm.tsx](file:///Users/anv./Documents/Virality%20Mapper/components/PostGeneratorForm.tsx).
 - **Stable Tab State Memory**: Navigating between Workspace, Settings, and Agents tabs keeps the current generation state, active stream readers, and typewriter animations running smoothly in the background without unmounting.
 - **Monospace Console & Stopwatch Logs**: Real-time logs panel showing crawler actions, model requests, and backoff retries, alongside a live Stopwatch tracking generation duration.
 - **Flexible Provider Integrations**: Out-of-the-box support for Google Gemini, OpenAI, Anthropic, OpenRouter, local models (Ollama, LM Studio), and custom API proxies.
-- **Premium UI/UX Design**: Modern, glassmorphic dark-theme design featuring premium typography (Google Fonts Inter/Outfit), subtle hover effects, responsive layout grids, and smooth scrolling powered by `lenis` and [LenisProvider.tsx](file:///c:/Users/dasan/Documents/GitHub/Virality-Mapper/components/LenisProvider.tsx).
+- **Premium UI/UX Design**: Modern, glassmorphic dark-theme design featuring premium typography (Google Fonts Inter/Outfit), subtle hover effects, responsive layout grids, and smooth scrolling powered by `lenis` and [components/LenisProvider.tsx](file:///Users/anv./Documents/Virality%20Mapper/components/LenisProvider.tsx).
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: Next.js (App Router) in [app/page.tsx](file:///c:/Users/dasan/Documents/GitHub/Virality-Mapper/app/page.tsx), React 19, Lucide Icons, Framer Motion, Lenis (Fluid Smooth Scroll), Vanilla CSS (Geist typographic styling in [app/globals.css](file:///c:/Users/dasan/Documents/GitHub/Virality-Mapper/app/globals.css))
-- **Backend/API**: Next.js API Routes (Server-Sent Events streaming) in [app/api/generate/route.ts](file:///c:/Users/dasan/Documents/GitHub/Virality-Mapper/app/api/generate/route.ts), dynamic LLM proxies (`@google/genai`, `@anthropic-ai/sdk`, `openai`)
+- **Frontend**: Next.js (App Router) in [app/workspace/page.tsx](file:///Users/anv./Documents/Virality%20Mapper/app/workspace/page.tsx), React 19, Lucide Icons, Framer Motion, Lenis (Fluid Smooth Scroll), Vanilla CSS (Geist typographic styling in [app/globals.css](file:///Users/anv./Documents/Virality%20Mapper/app/globals.css))
+- **Backend/API**: Next.js API Routes (Server-Sent Events streaming) in [app/api/generate/route.ts](file:///Users/anv./Documents/Virality%20Mapper/app/api/generate/route.ts), dynamic LLM proxies (`@google/genai`, `@anthropic-ai/sdk`, `openai`)
 
 ---
 
