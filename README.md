@@ -55,17 +55,21 @@ Each peer critique rates the copy out of 100 and outlines structural, metric-bas
 ### Phase 3: Recursive Refinement Cycle
 Each agent receives their specific critiques and refines their original post to implement suggested updates, returning the updated post along with a change log argument explaining their edits.
 
-### Phase 4: Consensus Settle Panel (Master Synthesizer)
-The 3 refined drafts, their critique histories, and self-change arguments are consolidated in a final consensus call:
+### Phase 4: Consensus Settle Panel & A/B Testing Simulator
+The 3 refined drafts, their critique histories, and self-change arguments are consolidated in a final consensus and validation pipeline:
 - **Unbiased Judge**: A dedicated judge agent merges the absolute best parts of the drafts (e.g. Agent Alpha's hook, Agent Beta's value list, Agent Gamma's storytelling arc).
-- **Strict Quality Checks**: Enforces copywriting guidelines (under 1200 chars, no abstract fluff like "game-changing" or "digital abyss", exact binary question ending, bridging sentences before metrics, cohesive single metaphors).
-- **Multi-Axis Performance Score**: Automatically computes individual ratings for **Hook Strength**, **Readability**, **Credibility**, and **Viral Potential** which are dynamically rendered in the UI.
+- **Strict Quality Checks & Formatting Sanitizers**: Enforces copywriting guidelines (under 1200 chars, no abstract fluff like "game-changing") and strips mathematical bold/italic unicode characters back to standard alphanumeric representation. Auto-formats paragraph spacing to ensure a maximum of 2 sentences per text block for mobile feed dwell-time.
+- **Multi-Axis Performance Score**: Automatically computes individual ratings for **Hook Strength**, **Readability** (estimated Flesch Reading Ease score), **Credibility**, and **Viral Potential** which are dynamically rendered in the UI.
+- **AI Focus Group A/B Simulator**: Evaluates the synthesized post against 4 distinct target audience personas (*Skeptical CTO*, *Hustling Solopreneur*, *Metrics-Driven VC*, *Developer Advocate*). Each persona evaluates the draft, outputs scroll-stopping/comment/repost probability ratings, and provides qualitative feedback.
 
 ---
 
 ## ✨ Key Features
 
-- **Live Search Grounding**: Automatically extracts real-time professional hooks and trending structures from LinkedIn posts via a multi-engine scraper pipeline (Yahoo Search primary, DuckDuckGo Lite & HTML fallbacks) with strict monthly recency filters implemented in [app/api/generate/route.ts](file:///c:/Users/dasan/Documents/GitHub/Virality-Mapper/app/api/generate/route.ts).
+- **Live & Organic Search Grounding**: Automatically extracts real-time professional hooks and trending structures from LinkedIn posts via a multi-engine scraper pipeline (Yahoo Search primary, DuckDuckGo Lite & HTML fallbacks) with strict monthly recency filters. If a **SerpApi key** is configured, queries Google Search organically with strict monthly filters (`tbs=qdr:m`) to bypass scrapers.
+- **Neuromarketing Hook Archetypes**: Select dropdown to target specific copywriting angles: *Contrarian Interrupt* (shock & debunk), *Vulnerable Disclosure* (failure & trust), *High-Value Stash* (resources & curation), and *Threat & Fear* (operational risk).
+- **AI Target Audience Focus Group**: Runs simulated evaluations across 4 professional profiles to audit and score scroll-stopping, commenting probability, and virality share rates before final publication.
+- **Self-Improving RAG Analytics Loop**: Record actual views, likes, and comments for published posts in the Archive pane. The system automatically extracts these success stories and prepends them as top-priority few-shot reference templates for future generations.
 - **Multi-Axis Scoring System**: Receives 4-axis performance metrics (Hook Strength, Readability, Credibility, Viral Potential) for the final consolidated post, rendered through visual score meters in [ResultsDisplay.tsx](file:///c:/Users/dasan/Documents/GitHub/Virality-Mapper/components/ResultsDisplay.tsx).
 - **Persistent Credentials & Configurations**: All LLM API keys (`vm_api_keys`) and custom agent settings (`vm_agents_config`) are saved locally in the browser's `localStorage` via [SettingsTab.tsx](file:///c:/Users/dasan/Documents/GitHub/Virality-Mapper/components/SettingsTab.tsx) and [page.tsx](file:///c:/Users/dasan/Documents/GitHub/Virality-Mapper/app/page.tsx). No keys are reset or wiped on page refresh, and no credentials ever touch a database.
 - **Configurable LLM Timeouts**: Adjust standard API timeouts (default 30 seconds) via the `LLM_TIMEOUT_MS` constant in [app/api/generate/route.ts](file:///c:/Users/dasan/Documents/GitHub/Virality-Mapper/app/api/generate/route.ts#L321).

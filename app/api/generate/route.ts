@@ -185,10 +185,32 @@ async function callLLM(
   }
 }
 
-async function searchLinkedInTrends(query: string): Promise<string[]> {
+async function searchLinkedInTrends(query: string, serpapiKey?: string): Promise<string[]> {
   const currentYear = new Date().getFullYear();
   const searchQuery = `site:linkedin.com ${query} post ${currentYear}`;
   const userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
+  // Try SerpApi first if API key is provided
+  if (serpapiKey) {
+    try {
+      const url = `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(searchQuery)}&api_key=${serpapiKey}&tbs=qdr:m`;
+      const res = await fetch(url);
+      if (res.status === 200) {
+        const json = await res.json();
+        if (json.organic_results && Array.isArray(json.organic_results)) {
+          const snippets = json.organic_results
+            .map((item: any) => item.snippet || item.title || "")
+            .filter((t: string) => t.trim().length > 10)
+            .slice(0, 6);
+          if (snippets.length > 0) {
+            return snippets;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("SerpApi search trends query failed, falling back to local scraping:", err);
+    }
+  }
 
   // Try Yahoo Search first (highly stable, simple div classes, no Cloudflare block)
   try {
@@ -412,7 +434,7 @@ Example format:
 
 export async function POST(req: Request) {
   try {
-    const { appName, description, targetAudience, tone, apiKeys, agents } = await req.json();
+    const { appName, description, targetAudience, tone, apiKeys, agents, hookArchetype, enrichedSuccessTemplates } = await req.json();
 
     if (!appName || !description) {
       return NextResponse.json(
@@ -464,7 +486,8 @@ export async function POST(req: Request) {
           sendEvent("activity", { message: `Searching live LinkedIn post trends for: ${topics.join(", ")}`, type: "info" });
 
           // Scrape search results for each topic concurrently
-          const scrapePromises = topics.map(topic => searchLinkedInTrends(topic));
+          const serpapiKey = apiKeys?.serpapi;
+          const scrapePromises = topics.map(topic => searchLinkedInTrends(topic, serpapiKey));
           const scrapeResultsList = await Promise.all(scrapePromises);
 
           // Combine and deduplicate snippets
@@ -495,7 +518,7 @@ export async function POST(req: Request) {
 
           // Retrieve matching high-performing posts from local Hall-of-Fame database
           sendEvent("activity", { message: "Retrieving matching high-performing post templates from local database...", type: "info" });
-          const relevantViralPosts = findRelevantViralPosts(topics);
+          const relevantViralPosts = findRelevantViralPosts(topics, enrichedSuccessTemplates);
           sendEvent("activity", { message: `Matched ${relevantViralPosts.length} top-tier viral structures for topics: ${topics.join(", ")}`, type: "success" });
 
           const viralExamplesContext = `High-Performing LinkedIn Post Templates (Reference Structures):\n${relevantViralPosts.map((p, i) => `
@@ -526,6 +549,18 @@ Structural Analysis:
             );
           };
 
+          // Build Hook Archetype Copywriting Rules
+          let archetypeInstruction = "";
+          if (hookArchetype === "contrarian") {
+            archetypeInstruction = "\nHOOK ARCHETYPE (Contrarian Interrupt): Open with an aggressive, counter-intuitive opening statement that debunks a standard, widely accepted professional belief. E.g. 'Your design system is slowly killing your product velocity.' No conversational intro, go straight for the pattern-interrupt.";
+          } else if (hookArchetype === "vulnerable") {
+            archetypeInstruction = "\nHOOK ARCHETYPE (Vulnerable Disclosure): Open with a transparent, high-integrity professional failure, extreme cost saving, or hard truth. E.g. 'We spent 6 months building X and got exactly 0 customers.' Force immediate trust through vulnerability.";
+          } else if (hookArchetype === "value-stash") {
+            archetypeInstruction = "\nHOOK ARCHETYPE (High-Value Stash): Open by announcing a major compilation, repository release, or technical breakdown you completed to save them hours. E.g. 'I spent 40 hours analyzing X so you don't have to.' Focus on high-effort curation.";
+          } else if (hookArchetype === "threat-fear") {
+            archetypeInstruction = "\nHOOK ARCHETYPE (Threat & Fear): Start with a pressing, logical operational or security risk they are ignoring in their stack. E.g. 'Relying on cloud tools for sensitive IP is an unacceptable security gamble.' Trigger immediate risk-aversion.";
+          }
+
           // Step 2: Phase 1 (Drafting)
           sendEvent("status", { message: "[Phase 1] Agents Alpha, Beta, & Gamma drafting initial posts..." });
 
@@ -544,6 +579,7 @@ High-Performing Reference Examples:
 ${viralExamplesContext}
 
 CRITICAL COPYWRITING RULES:
+${archetypeInstruction}
 1. The Hook (Relatable Fear): Start EXACTLY mid-thought with a gut-punch reality of the user's specific experience based on the target audience. DO NOT soften the hook or bury it inside a generic sentence. No emojis in the hook.
 2. Length, Formatting & Filler: Keep the main portion of the post strictly under 1200 characters. No long product spec sheets. DO NOT include abstract filler paragraphs. Every line must earn its place. Get straight to the value. Use emoji bullets for feature breakdowns instead of plain dashes, to make it stand out a bit.
 3. Kill Marketing Fluff: NEVER use phrases like "digital abyss", "spaghetti graphs", "future of", "game-changer", or "early access alert". Speak directly to the target audience.
@@ -792,6 +828,7 @@ Argument: ${refinedC.argument}
 Your task is to analyze these 3 refined options, synthesize their absolute strongest features (e.g. Agent Alpha's pattern-interrupting hook, Agent Beta's value-driven list, Agent Gamma's storytelling arc), and compile the single absolute best LinkedIn post.
 
 CRITICAL COPYWRITING QUALITY CHECKS:
+${archetypeInstruction}
 1. The Hook: Must open EXACTLY mid-thought with a compelling hook relevant to the audience. Do not bury it in a generic opener. No emojis in the hook.
 2. Structure & Filler: The post must be strictly under 1200 characters. Ban abstract filler paragraphs entirely. Feature breakdowns must not exceed 2 bullet points and MUST use context-appropriate emoji bullets instead of plain dashes.
 3. Zero Marketing Fluff: Strip out words like "digital abyss", "spaghetti graphs", "future of", or "game-changing". Tone must be authentic.
@@ -933,6 +970,69 @@ Output a JSON object in the exact same format:
               console.error("Formatting sanitization failed:", fmtErr);
             }
 
+            // Step 4.7: Simulated Persona Focus Group A/B Panel
+            try {
+              sendEvent("status", { message: "[A/B Panel] Simulating response of target audience focus group..." });
+              sendEvent("activity", { message: "[A/B Panel] Evaluating scroll stopping, commenting likelihood, and virality sharing indices...", type: "info" });
+
+              const personasEvalPrompt = `
+You are the Target Audience Focus Group. Evaluate this synthesized LinkedIn post from the perspective of 4 distinct professional profiles:
+
+POST TO EVALUATE:
+---
+${finalOutcome.content}
+---
+
+TARGET PERSONAS:
+1. "Skeptical CTO" (🛡️) - Values deep architecture details, concrete benchmarks, security integrity, and zero cloud-lockout egress.
+2. "Hustling Solopreneur" (⚡) - Values speed to build, automation efficiency, direct revenue/business growth, and simple tooling.
+3. "Metrics-Driven VC" (📈) - Values market size disruption, high product velocity metrics, team scale, and competitive moats.
+4. "Developer Advocate" (💡) - Values great developer experience (DX), open-source accessibility, local-first setups, and clear templates.
+
+For each persona, output:
+- name: The exact persona name.
+- avatar: The emoji avatar.
+- feedback: A short, 1-sentence critique from their perspective.
+- scrollStopping: 0-100 rating of how likely they are to click "See More" (cliffhanger appeal).
+- engagement: 0-100 rating of how likely they are to leave a comment (actionability / CTA pull).
+- virality: 0-100 rating of how likely they are to share/repost (general value & relatability).
+
+Output a JSON object containing a 'personas' array matching this structure. Do not wrap in backticks or preamble.
+Example:
+{
+  "personas": [
+    {
+      "name": "Skeptical CTO",
+      "avatar": "🛡️",
+      "feedback": "I love the local-first SQLite explanation, but I want to see details about sync conflict resolution.",
+      "scrollStopping": 85,
+      "engagement": 75,
+      "virality": 60
+    }
+  ]
+}
+              `;
+
+              const personasResult = await callLLMWithRetry(
+                agentA.provider,
+                agentA.model,
+                "You are the Focus Group Panel. You evaluate posts from user-persona angles.",
+                personasEvalPrompt,
+                0.15,
+                apiKeys,
+                "A/B Panel",
+                (msg, type = "info") => sendEvent("activity", { message: msg, type })
+              );
+
+              if (personasResult && Array.isArray(personasResult.personas)) {
+                finalOutcome.personas = personasResult.personas;
+                sendEvent("activity", { message: `[A/B Panel] Focus group simulation complete. Evaluated ${personasResult.personas.length} personas successfully.`, type: "success" });
+              }
+            } catch (pErr: any) {
+              console.warn("Persona focus group simulation failed:", pErr);
+              sendEvent("activity", { message: `[A/B Panel] Bypassed focus group evaluation (${pErr.message || pErr})`, type: "warning" });
+            }
+
           } catch (e: any) {
             console.error("Synthesis failed, falling back to top scored refined draft:", e);
             const sorted = [
@@ -957,7 +1057,8 @@ Output a JSON object in the exact same format:
               style: "Settle Consensus Panel",
               content: finalOutcome.content,
               scores: finalOutcome.scores || { hookStrength: 90, readability: 90, credibility: 90, viralPotential: 90 },
-              critique: finalOutcome.synthesisRationale || "Consensus settled successfully."
+              critique: finalOutcome.synthesisRationale || "Consensus settled successfully.",
+              personas: finalOutcome.personas || []
             }
           });
         } catch (err: any) {

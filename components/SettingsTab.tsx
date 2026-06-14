@@ -13,6 +13,7 @@ interface ApiKeys {
   lmStudioUrl: string;
   customBaseUrl: string;
   customApiKey: string;
+  serpapi: string;
 }
 
 export default function SettingsTab({
@@ -351,6 +352,41 @@ export default function SettingsTab({
             </div>
             {renderTestStatus("custom")}
           </div>
+        </div>
+      </div>
+
+      {/* External Search & Grounding APIs */}
+      <div className="glass-panel p-6 flex flex-col gap-4">
+        <div className="flex items-center gap-2 mb-2" style={{ borderBottom: "1px solid var(--border-muted)", paddingBottom: "14px" }}>
+          <Globe size={18} className="text-rose-500" />
+          <h3 style={{ fontSize: "1.05rem", fontWeight: 600 }} className="text-white">External Search & Grounding APIs</h3>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">SerpApi API Key (Optional)</label>
+          <div className="flex gap-2 w-full">
+            <div className="relative flex-1">
+              <input
+                type={showKeys["serpapi"] ? "text" : "password"}
+                name="serpapi"
+                autoComplete="new-password"
+                className="form-input pr-10"
+                placeholder="Enter SerpApi key for highly accurate trending LinkedIn data..."
+                value={keys.serpapi || ""}
+                onChange={handleChange}
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors bg-transparent border-0 cursor-pointer flex items-center justify-center"
+                onClick={() => toggleShowKey("serpapi")}
+              >
+                {showKeys["serpapi"] ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+          <span className="text-xs text-zinc-500 mt-1.5 block">
+            If provided, Virality Mapper will query Google Search organically via SerpApi for site:linkedin.com trends instead of using local fallback scrapers.
+          </span>
         </div>
       </div>
 

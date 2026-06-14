@@ -44,6 +44,7 @@ export default function PostGeneratorForm({
     description: "",
     targetAudience: "",
     tone: "Professional, punchy, engaging",
+    hookArchetype: "organic",
   });
 
   // Real-time streaming debate states
@@ -143,7 +144,7 @@ export default function PostGeneratorForm({
 
   const activeStep = getActiveStep();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -273,6 +274,34 @@ export default function PostGeneratorForm({
       return;
     }
 
+    // Load local feedback-loop analytics templates
+    let enrichedSuccessTemplates = [];
+    try {
+      const localArchiveStr = localStorage.getItem("vm_post_archive");
+      if (localArchiveStr) {
+        const parsedArchive = JSON.parse(localArchiveStr);
+        enrichedSuccessTemplates = parsedArchive
+          .filter((item: any) => item.performance && item.performance.likes > 0)
+          .map((item: any) => ({
+            content: item.result?.best?.content || "",
+            niche: item.appName || "LinkedIn Post",
+            metrics: {
+              likes: item.performance.likes,
+              comments: item.performance.comments,
+              reposts: Math.round(item.performance.likes * 0.08)
+            },
+            structure: {
+              hook: item.result?.best?.hookExplanation || "Enriched RAG Hook Template.",
+              body: "Self-published successful layout.",
+              cta: "Optimized user CTA.",
+              metaphor: "Ground-truth benchmark."
+            }
+          }));
+      }
+    } catch (e) {
+      console.warn("Failed to load local analytics templates for RAG enrichment:", e);
+    }
+
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -281,6 +310,7 @@ export default function PostGeneratorForm({
           ...formData,
           apiKeys,
           agents,
+          enrichedSuccessTemplates,
         }),
       });
 
@@ -414,6 +444,26 @@ export default function PostGeneratorForm({
                     value={formData.tone}
                     onChange={handleChange}
                   />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">
+                    <Sparkles size={14} className="text-rose-400" /> Hook Archetype
+                  </label>
+                  <select
+                    id="hookArchetype"
+                    name="hookArchetype"
+                    className="form-input"
+                    value={formData.hookArchetype}
+                    onChange={handleChange}
+                    style={{ background: "var(--zinc-900)", cursor: "pointer" }}
+                  >
+                    <option value="organic">Organic / Default</option>
+                    <option value="contrarian">Contrarian Interrupt (Shock & Debunk)</option>
+                    <option value="vulnerable">Vulnerable Disclosure (Failure & Trust)</option>
+                    <option value="value-stash">High-Value Stash (Resources & Curation)</option>
+                    <option value="threat-fear">Threat & Fear (Risks & Heuristics)</option>
+                  </select>
                 </div>
               </div>
 

@@ -38,6 +38,14 @@ interface GenerationResult {
     };
     score?: number;
     critique: string;
+    personas?: Array<{
+      name: string;
+      avatar: string;
+      feedback: string;
+      scrollStopping: number;
+      engagement: number;
+      virality: number;
+    }>;
   };
 }
 
@@ -294,6 +302,73 @@ export default function ResultsDisplay({ result }: { result: GenerationResult })
           </button>
         </div>
       </div>
+
+      {/* AI Persona A/B Focus Group Simulator */}
+      {result.best.personas && result.best.personas.length > 0 && (
+        <div className="glass-panel p-6 flex flex-col gap-6 bg-[#030305]/40 border-zinc-800">
+          <div className="flex items-center gap-2 mb-2" style={{ borderBottom: "1px solid var(--border-muted)", paddingBottom: "14px" }}>
+            <Cpu size={18} className="text-rose-500 animate-pulse" />
+            <h3 style={{ fontSize: "1.05rem", fontWeight: 600 }} className="text-white">AI Target Audience Focus Group (A/B Test Simulation)</h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "20px" }}>
+            {result.best.personas.map((persona: any, idx: number) => {
+              const avgScore = Math.round((persona.scrollStopping + persona.engagement + persona.virality) / 3);
+              return (
+                <div key={idx} className="glass-panel p-4 flex flex-col gap-3 hover:border-zinc-700 transition-colors" style={{ background: "rgba(10, 10, 15, 0.45)" }}>
+                  <div className="flex items-center gap-3 justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 text-lg">
+                        {persona.avatar || "👤"}
+                      </div>
+                      <div className="flex flex-col">
+                        <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "white" }}>{persona.name}</span>
+                        <span style={{ fontSize: "0.7rem", color: "var(--zinc-500)" }}>Focus Persona</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 font-mono text-xs">
+                      <span className="text-zinc-500">SCORE:</span>
+                      <span style={{ color: avgScore >= 85 ? "var(--accent)" : avgScore >= 70 ? "#fbbf24" : "#f87171", fontWeight: 600 }}>
+                        {avgScore}/100
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="serif-italic" style={{ fontSize: "0.8rem", color: "var(--zinc-400)", lineHeight: 1.45, margin: 0 }}>
+                    "{persona.feedback}"
+                  </p>
+
+                  <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-zinc-900/50">
+                    <div className="flex items-center justify-between text-[10px] font-mono">
+                      <span className="text-zinc-500">Scroll Stopping:</span>
+                      <span className="text-zinc-300">{persona.scrollStopping}%</span>
+                    </div>
+                    <div style={{ height: "4px", width: "100%", background: "var(--zinc-900)", borderRadius: "2px", overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${persona.scrollStopping}%`, background: "var(--accent)", borderRadius: "2px" }} />
+                    </div>
+
+                    <div className="flex items-center justify-between text-[10px] font-mono">
+                      <span className="text-zinc-500">Likelihood to Comment:</span>
+                      <span className="text-zinc-300">{persona.engagement}%</span>
+                    </div>
+                    <div style={{ height: "4px", width: "100%", background: "var(--zinc-900)", borderRadius: "2px", overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${persona.engagement}%`, background: "#fbbf24", borderRadius: "2px" }} />
+                    </div>
+
+                    <div className="flex items-center justify-between text-[10px] font-mono">
+                      <span className="text-zinc-500">Virality (Share Rate):</span>
+                      <span className="text-zinc-300">{persona.virality}%</span>
+                    </div>
+                    <div style={{ height: "4px", width: "100%", background: "var(--zinc-900)", borderRadius: "2px", overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${persona.virality}%`, background: "#38bdf8", borderRadius: "2px" }} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Divider */}
       <div className="flex items-center gap-4 my-8" style={{ width: "100%" }}>

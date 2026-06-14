@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sparkles, Cpu, Key, Sliders, Globe, Activity, Archive } from "lucide-react";
+import { Sparkles, Cpu, Key, Sliders, Globe, Activity, Archive, TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import PostGeneratorForm from "@/components/PostGeneratorForm";
 import ResultsDisplay from "@/components/ResultsDisplay";
@@ -64,6 +64,7 @@ interface ApiKeys {
   lmStudioUrl: string;
   customBaseUrl: string;
   customApiKey: string;
+  serpapi: string;
 }
 
 const DEFAULT_AGENTS: Agent[] = [
@@ -105,6 +106,7 @@ const DEFAULT_KEYS: ApiKeys = {
   lmStudioUrl: "http://localhost:1234",
   customBaseUrl: "",
   customApiKey: "",
+  serpapi: "",
 };
 
 export default function Home() {
@@ -115,6 +117,10 @@ export default function Home() {
   const [loaded, setLoaded] = useState(false);
   const [archive, setArchive] = useState<any[]>([]);
   const [selectedArchiveId, setSelectedArchiveId] = useState<string | null>(null);
+  const [editingPerformanceId, setEditingPerformanceId] = useState<string | null>(null);
+  const [impressions, setImpressions] = useState(0);
+  const [likes, setLikes] = useState(0);
+  const [comments, setComments] = useState(0);
 
   // Sync state from LocalStorage on mount
   useEffect(() => {
@@ -203,6 +209,14 @@ export default function Home() {
       if (selectedArchiveId === id) {
         setSelectedArchiveId(updated.length > 0 ? updated[0].id : null);
       }
+      return updated;
+    });
+  };
+
+  const handleSavePerformance = (id: string, perfData: { impressions: number; likes: number; comments: number }) => {
+    setArchive(prev => {
+      const updated = prev.map(item => item.id === id ? { ...item, performance: perfData } : item);
+      localStorage.setItem("vm_post_archive", JSON.stringify(updated));
       return updated;
     });
   };
@@ -433,6 +447,104 @@ export default function Home() {
                                   <div><strong className="text-zinc-500">Tone:</strong> <span className="text-zinc-300">{selectedItem.tone || "General"}</span></div>
                                   <div style={{ gridColumn: "span 2" }}><strong className="text-zinc-500">Description:</strong> <span className="text-zinc-400 line-clamp-3">{selectedItem.description}</span></div>
                                   <div style={{ gridColumn: "span 2" }}><strong className="text-zinc-500">Target Audience:</strong> <span className="text-zinc-300">{selectedItem.targetAudience || "General Professionals"}</span></div>
+                                </div>
+
+                                {/* Performance metrics dashboard inline */}
+                                <div style={{ borderTop: "1px dashed var(--border-muted)", paddingTop: "12px", marginTop: "4px" }}>
+                                  <div className="flex justify-between items-center mb-2">
+                                    <div className="flex items-center gap-1.5 text-zinc-500 font-semibold uppercase text-[10px] tracking-wider font-mono">
+                                      <TrendingUp size={12} className="text-rose-500 animate-pulse" />
+                                      <span>Self-Published Analytics (Feedback Loop)</span>
+                                    </div>
+                                    {!selectedItem.performance && editingPerformanceId !== selectedItem.id && (
+                                      <button
+                                        onClick={() => {
+                                          setEditingPerformanceId(selectedItem.id);
+                                          setImpressions(0);
+                                          setLikes(0);
+                                          setComments(0);
+                                        }}
+                                        className="text-[10px] text-rose-400 font-semibold cursor-pointer hover:underline border-0 bg-transparent"
+                                      >
+                                        + Record Actual Metrics
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  {editingPerformanceId === selectedItem.id ? (
+                                    <div className="flex flex-wrap gap-3 items-end bg-[#010102] p-3 rounded border border-zinc-800">
+                                      <div className="flex flex-col gap-1 text-[10px] font-mono text-zinc-400">
+                                        <span>Impressions</span>
+                                        <input
+                                          type="number"
+                                          className="form-input text-xs w-24 h-7 p-1"
+                                          style={{ background: "#0c0c0e", borderColor: "#27272a" }}
+                                          value={impressions}
+                                          onChange={(e) => setImpressions(Number(e.target.value))}
+                                        />
+                                      </div>
+                                      <div className="flex flex-col gap-1 text-[10px] font-mono text-zinc-400">
+                                        <span>Likes</span>
+                                        <input
+                                          type="number"
+                                          className="form-input text-xs w-24 h-7 p-1"
+                                          style={{ background: "#0c0c0e", borderColor: "#27272a" }}
+                                          value={likes}
+                                          onChange={(e) => setLikes(Number(e.target.value))}
+                                        />
+                                      </div>
+                                      <div className="flex flex-col gap-1 text-[10px] font-mono text-zinc-400">
+                                        <span>Comments</span>
+                                        <input
+                                          type="number"
+                                          className="form-input text-xs w-24 h-7 p-1"
+                                          style={{ background: "#0c0c0e", borderColor: "#27272a" }}
+                                          value={comments}
+                                          onChange={(e) => setComments(Number(e.target.value))}
+                                        />
+                                      </div>
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={() => {
+                                            handleSavePerformance(selectedItem.id, { impressions, likes, comments });
+                                            setEditingPerformanceId(null);
+                                          }}
+                                          className="custom-btn custom-btn-accent text-[10px] h-7 px-3 flex items-center justify-center cursor-pointer"
+                                        >
+                                          Save
+                                        </button>
+                                        <button
+                                          onClick={() => setEditingPerformanceId(null)}
+                                          className="custom-btn custom-btn-secondary text-[10px] h-7 px-3 flex items-center justify-center cursor-pointer"
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : selectedItem.performance ? (
+                                    <div className="flex items-center gap-4 justify-between bg-zinc-900/30 border border-zinc-800/40 p-2.5 rounded text-xs font-mono text-zinc-300">
+                                      <div className="flex gap-4">
+                                        <div><span className="text-zinc-500">Impressions:</span> {selectedItem.performance.impressions.toLocaleString()}</div>
+                                        <div><span className="text-zinc-500">Likes:</span> {selectedItem.performance.likes.toLocaleString()}</div>
+                                        <div><span className="text-zinc-500">Comments:</span> {selectedItem.performance.comments.toLocaleString()}</div>
+                                      </div>
+                                      <button
+                                        onClick={() => {
+                                          setEditingPerformanceId(selectedItem.id);
+                                          setImpressions(selectedItem.performance.impressions);
+                                          setLikes(selectedItem.performance.likes);
+                                          setComments(selectedItem.performance.comments);
+                                        }}
+                                        className="text-[10px] text-zinc-500 hover:text-white cursor-pointer border-0 bg-transparent animate-pulse"
+                                      >
+                                        [Edit]
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div className="text-[10px] text-zinc-500 font-mono italic">
+                                      No performance metrics recorded for this publication yet. Record them once published to feed the self-improving RAG database.
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                               <ResultsDisplay result={selectedItem.result} />

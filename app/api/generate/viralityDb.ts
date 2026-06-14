@@ -197,13 +197,33 @@ Hot take: If you need a daily call to know what your developers are doing, you h
   }
 ];
 
-export function findRelevantViralPosts(topics: string[]): ViralPost[] {
+export function findRelevantViralPosts(topics: string[], enrichedSuccessTemplates?: any[]): ViralPost[] {
+  // Combine native DB with user's enriched templates
+  let database = [...VIRAL_POSTS_DB];
+  if (enrichedSuccessTemplates && enrichedSuccessTemplates.length > 0) {
+    const formatted: ViralPost[] = enrichedSuccessTemplates.map((item, idx) => ({
+      id: `user-enriched-${idx}`,
+      title: item.niche || "User Enriched Publication",
+      niche: item.niche || "User Enriched",
+      tags: [...topics, "user-success", "enriched"],
+      metrics: item.metrics || { likes: 500, comments: 50, reposts: 10 },
+      content: item.content,
+      structure: item.structure || {
+        hook: "Enriched RAG template.",
+        body: "Self-published layout.",
+        cta: "Optimized user CTA.",
+        metaphor: "Ground-truth benchmark."
+      }
+    }));
+    database = [...formatted, ...database];
+  }
+
   if (!topics || topics.length === 0) {
-    return VIRAL_POSTS_DB.slice(0, 3);
+    return database.slice(0, 3);
   }
 
   // Basic keyword relevance matching
-  const scored = VIRAL_POSTS_DB.map(post => {
+  const scored = database.map(post => {
     let score = 0;
     const postText = (post.title + " " + post.niche + " " + post.tags.join(" ") + " " + post.content).toLowerCase();
     
@@ -220,6 +240,11 @@ export function findRelevantViralPosts(topics: string[]): ViralPost[] {
         }
       });
     });
+    
+    // Bias user-enriched posts slightly to make sure they get prioritized if they match topics
+    if (post.id.startsWith("user-enriched-") && score > 0) {
+      score += 5;
+    }
     
     return { post, score };
   });
