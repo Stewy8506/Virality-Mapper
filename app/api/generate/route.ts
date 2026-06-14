@@ -6,7 +6,7 @@ import Anthropic from "@anthropic-ai/sdk";
 // Helper to sanitize and robustly parse JSON from LLM responses
 function robustJsonParse(text: string): any {
   let cleanText = text.trim();
-  
+
   // Remove markdown code blocks if present
   if (cleanText.includes("```")) {
     const matches = cleanText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
@@ -337,7 +337,7 @@ async function callLLMWithRetry(
     try {
       onActivity(`[${agentName}] Contacting model... (Attempt ${attempt}/${maxRetries})`, "info");
       const startTime = Date.now();
-      
+
       const timeoutPromise = new Promise((_, reject) => {
         timerId = setTimeout(() => {
           reject(new Error(`Request timed out after ${LLM_TIMEOUT_MS / 1000} seconds`));
@@ -358,12 +358,12 @@ async function callLLMWithRetry(
       if (timerId) clearTimeout(timerId);
       const isRateLimit = err.status === 429 || err.message?.includes("429") || err.message?.includes("Rate limit") || err.message?.includes("quota") || err.message?.includes("exhausted");
       const warningMsg = `[${agentName}] Call failed: ${isRateLimit ? "Rate limit / Quota exceeded" : err.message || err}`;
-      
+
       if (attempt >= maxRetries) {
         onActivity(`[${agentName}] Max retries reached. Generation will abort/fallback.`, "warning");
         throw err;
       }
-      
+
       const delay = isRateLimit ? 5000 * attempt : 1500 * attempt;
       onActivity(`${warningMsg}. Retrying in ${(delay / 1000).toFixed(0)}s...`, "warning");
       await new Promise((resolve) => setTimeout(resolve, delay));
@@ -396,7 +396,7 @@ Example format:
     const res = onActivity
       ? await callLLMWithRetry(agent.provider, agent.model, systemPrompt, userPrompt, 0.2, apiKeys, "Topic Extractor", onActivity)
       : await callLLM(agent.provider, agent.model, systemPrompt, userPrompt, 0.2, apiKeys);
-      
+
     if (res && Array.isArray(res.topics)) {
       return res.topics.map((t: string) => t.trim()).filter(Boolean);
     }
@@ -456,14 +456,14 @@ export async function POST(req: Request) {
             agentA,
             (msg, type) => sendEvent("activity", { message: msg, type })
           );
-          
+
           sendEvent("status", { message: `Broad topics found: ${topics.join(", ")}. Querying viral Indian posts...` });
           sendEvent("activity", { message: `Searching live LinkedIn post trends for: ${topics.join(", ")}`, type: "info" });
-          
+
           // Scrape search results for each topic concurrently
           const scrapePromises = topics.map(topic => searchLinkedInTrends(topic));
           const scrapeResultsList = await Promise.all(scrapePromises);
-          
+
           // Combine and deduplicate snippets
           const combinedTrendsSet = new Set<string>();
           let snippetCount = 0;
@@ -474,7 +474,7 @@ export async function POST(req: Request) {
             }
           }
           const liveTrends = Array.from(combinedTrendsSet).slice(0, 8); // take top 8 combined snippets
-          
+
           if (liveTrends.length === 0) {
             sendEvent("activity", { message: "Scraper yielded 0 hits. Injecting high-performing LinkedIn copywriting templates for grounding...", type: "warning" });
             liveTrends.push(
@@ -508,7 +508,7 @@ export async function POST(req: Request) {
 
           // Step 2: Phase 1 (Drafting)
           sendEvent("status", { message: "[Phase 1] Agents Alpha, Beta, & Gamma drafting initial posts..." });
-          
+
           const draftUserPrompt = `
 Generate a viral LinkedIn post draft for the following project.
 Context:
@@ -521,12 +521,14 @@ LinkedIn Search Context:
 ${trendsContext}
 
 CRITICAL COPYWRITING RULES:
-1. The Hook (Relatable Fear): Start with a gut-punch reality of the developer/professional experience. Example: "If I touch this file, what breaks?" DO NOT use emojis in the hook.
-2. Kill Marketing Fluff: NEVER use phrases like "digital abyss", "spaghetti graphs", "future of", "game-changer", or "early access alert". Speak like an engineer, not a marketer.
-3. Proof & Real Benchmarks: Replace fake stats with verifiable or hardcoded benchmarks (e.g., "We parse 1.8M lines of code locally in 4.3 seconds using Rust"). Do not use generic claims like "saves 15 hours".
-4. The "Ship the GIF" Rule: Include exactly one mandatory visual proof placeholder (e.g. "[Insert 5-sec GIF showing the blast radius in action]"). Posts with visual media are mandatory.
-5. Spicy, Binary Question: End the post with a hot take followed by a binary question to drive comments (e.g., "Hot take: Refactoring without a map is just guessing. Agree?").
-6. Urgent CTA: Frame the Call-to-Action with non-marketing urgency (e.g., "Drop a comment and I'll DM you the repo").
+1. The Hook (Relatable Fear): Start EXACTLY mid-thought with a gut-punch reality of the developer/professional experience (e.g. "If I touch this file, what breaks?"). DO NOT soften the hook or bury it inside a generic sentence like "Every engineer knows the dread". Include the phrase "hope-driven development" in the first 3 lines. No emojis in the hook.
+2. Length, Formatting & Filler: Keep the main portion of the post strictly under 1200 characters. No long product spec sheets. DO NOT include abstract filler paragraphs (e.g. "Large codebases become opaque..."). Every line must earn its place. Get straight to the value. Use emoji bullets (like ⚡️ and 🛡️) for feature breakdowns instead of plain dashes.
+3. Kill Marketing Fluff: NEVER use phrases like "digital abyss", "spaghetti graphs", "future of", "game-changer", or "early access alert". Speak like an engineer, not a marketer.
+4. Proof & Real Benchmarks: Replace fake stats with verifiable or hardcoded benchmarks (e.g., "We parse 1.8M lines of code locally in 4.3 seconds using Rust"). You MUST include a bridging sentence before listing performance numbers to connect the story to the proof (e.g., "Here's what we measured on an M3 Max:"). Do not use generic claims like "saves 15 hours".
+5. The "Ship the GIF" Rule: Include exactly one mandatory visual proof placeholder (e.g. "[Insert 5-sec GIF showing the blast radius in action]"). Posts with visual media are mandatory.
+6. Spicy, Binary Question: End the post EXACTLY with this hot take verbatim: "Hot take: Relying on cloud tools for sensitive IP visualization is an unacceptable security gamble. Agree or disagree?" DO NOT invent your own hot take.
+7. Credibility & Urgency: Always use "We built" instead of "I built" to imply team credibility. Frame the Call-to-Action with non-marketing urgency (e.g., "Drop a comment and I'll DM you the repo").
+8. Cohesive Metaphors: Stick to ONE strong engineering metaphor (e.g., "debugging blindfolded"). Do NOT mix metaphors or use dramatic non-software analogies (e.g., do NOT say "flying a 747 without a radar").
 
 CRITICAL FORMAT REQUIREMENT:
 You must output a JSON object containing the exact properties: "content" and "hookExplanation".
@@ -747,12 +749,14 @@ Argument: ${refinedC.argument}
 Your task is to analyze these 3 refined options, synthesize their absolute strongest features (e.g. Agent Alpha's pattern-interrupting hook, Agent Beta's value-driven list, Agent Gamma's storytelling arc), and compile the single absolute best LinkedIn post.
 
 CRITICAL COPYWRITING QUALITY CHECKS:
-1. The Hook: Ensure it uses a sharp, relatable fear-based hook (e.g. "If I touch this file, what breaks?"). No emojis in the hook.
-2. Zero Marketing Fluff: Strip out words like "digital abyss", "spaghetti graphs", "future of", or "game-changing". The tone must be engineering-authentic.
-3. Real Benchmarks: Ensure any metrics are realistic and specific (e.g., "1.8M lines in 4.3 seconds") instead of generic "65% faster" claims.
-4. Visual Proof: The post MUST include exactly one descriptive visual placeholder (e.g., "[Insert 5-sec GIF showing the blast radius in action here]").
-5. Spicy, Binary Engagement: The post must end with a hot take and a binary question (e.g., "Hot take: [spicy belief]. Agree?") to drive comments.
-6. CTA: Non-marketing CTA (e.g., "Drop a comment and I'll DM the repo").
+1. The Hook: Must open EXACTLY mid-thought (e.g. "If I touch this file, what breaks?"). Do not bury it in a generic opener. Include "hope-driven development" in the first 3 lines. No emojis in the hook.
+2. Structure & Filler: The post must be strictly under 1200 characters. Ban abstract filler paragraphs entirely. Feature breakdowns must not exceed 2 bullet points and MUST use emoji bullets (like ⚡️ and 🛡️) instead of plain dashes.
+3. Zero Marketing Fluff: Strip out words like "digital abyss", "spaghetti graphs", "future of", or "game-changing". The tone must be engineering-authentic.
+4. Real Benchmarks: Ensure any metrics are realistic and specific (e.g., "1.8M lines in 4.3 seconds"). You MUST include a bridging sentence before listing performance numbers to connect the story to the proof (e.g., "Here's what we measured on an M3 Max:").
+5. Visual Proof: The post MUST include exactly one descriptive visual placeholder (e.g., "[Insert 5-sec GIF showing the blast radius in action here]").
+6. Spicy, Binary Engagement: The post must end EXACTLY with this hot take verbatim: "Hot take: Relying on cloud tools for sensitive IP visualization is an unacceptable security gamble. Agree or disagree?" DO NOT invent your own hot take.
+7. Credibility & CTA: Always use "We built" instead of "I built". Use a non-marketing CTA (e.g., "Drop a comment and I'll DM the repo").
+8. Cohesive Metaphors: Ensure there is only ONE strong engineering metaphor (like "debugging blindfolded"). Do NOT mix metaphors or use non-software analogies like "flying a 747 without a radar".
 
 Output a JSON object with properties 'content', 'score' (estimated viral likelihood out of 100), and 'synthesisRationale'.
 
@@ -796,7 +800,7 @@ CRITICAL FORMAT REQUIREMENT:
           isClosed = true;
           try {
             controller.close();
-          } catch (e) {}
+          } catch (e) { }
         }
       },
       cancel() {
