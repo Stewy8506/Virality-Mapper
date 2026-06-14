@@ -1541,3 +1541,407 @@ html[data-theme="alabaster"] .sidebar-profile-collapsed-btn:hover {
   font-style: italic;
   font-size: 0.7rem;
 }
+
+/* Landing Page Styling Helpers */
+.landing-hero-title {
+  font-family: var(--font-sans);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  background: linear-gradient(135deg, var(--foreground) 30%, var(--zinc-500) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.feature-card-glow {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.feature-card-glow:hover {
+  border-color: var(--accent);
+  box-shadow: 0 10px 30px var(--accent-glow);
+  transform: translateY(-2px);
+}
+
+.landing-nav-link {
+  position: relative;
+  color: var(--zinc-400);
+  transition: color 0.2s ease;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+
+.landing-nav-link:hover {
+  color: var(--foreground);
+}
+
+.landing-nav-link::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  transform: scaleX(0);
+  height: 1px;
+  bottom: -4px;
+  left: 0;
+  background-color: var(--accent);
+  transform-origin: bottom right;
+  transition: transform 0.25s ease-out;
+}
+
+.landing-nav-link:hover::after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
+}
+
+/* High-End Typographic & Minimalist Design System */
+.typographic-landing {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 40px;
+  font-family: var(--font-sans);
+}
+
+.minimal-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 120px;
+  border-bottom: 1px solid var(--border-muted);
+}
+
+.logo-text {
+  font-family: var(--font-sans);
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  color: var(--foreground);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: default;
+}
+
+.logo-text:hover {
+  transform: scale(1.03);
+}
+
+.studio-link {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  border-bottom: 1px solid var(--accent);
+  padding-bottom: 3px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.studio-link:hover {
+  color: var(--foreground);
+  border-color: var(--foreground);
+}
+
+/* Hero Title section */
+.hero-wrapper {
+  padding: 160px 0 120px 0;
+  text-align: left;
+}
+
+.hero-large-title {
+  font-family: var(--font-sans);
+  font-size: 4.2rem;
+  font-weight: 800;
+  line-height: 0.92;
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+  margin-bottom: 40px;
+  color: var(--foreground);
+}
+
+@media (min-width: 640px) {
+  .hero-large-title {
+    font-size: 6.8rem;
+  }
+}
+
+.hero-description {
+  font-size: 1.28rem;
+  color: var(--zinc-400);
+  line-height: 1.6;
+  max-width: 580px;
+  margin-bottom: 56px;
+}
+
+.hero-cta-button {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  padding: 16px 36px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  background: transparent;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  border-radius: 4px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.hero-cta-button svg {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hero-cta-button:hover {
+  background: var(--accent);
+  color: var(--background);
+}
+
+.hero-cta-button:hover svg {
+  transform: translateX(4px);
+}
+
+/* Split Visualizer: Raw vs Consensus */
+.visualizer-split {
+  display: grid;
+  grid-template-columns: 1fr;
+  border: 1px solid var(--border-muted);
+  border-radius: 6px;
+  background: var(--panel-bg);
+  margin: 60px 0 160px 0;
+}
+
+@media (min-width: 768px) {
+  .visualizer-split {
+    grid-template-columns: 1fr 1px 1fr;
+  }
+}
+
+.visualizer-pane {
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.visualizer-pane:hover {
+  background: rgba(255, 255, 255, 0.015);
+  transform: translateY(-2px);
+}
+
+html[data-theme="alabaster"] .visualizer-pane:hover {
+  background: rgba(0, 0, 0, 0.015);
+}
+
+.visualizer-divider {
+  background: var(--border-muted);
+  width: 100%;
+  height: 1px;
+}
+
+@media (min-width: 768px) {
+  .visualizer-divider {
+    width: 1px;
+    height: 100%;
+  }
+}
+
+.pane-title {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--zinc-500);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pane-text {
+  font-size: 0.85rem;
+  line-height: 1.65;
+  color: var(--zinc-300);
+}
+
+.obsolete-style {
+  opacity: 0.35;
+  text-decoration: line-through;
+  text-decoration-color: rgba(255,255,255,0.4);
+}
+
+.survivor-style {
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+/* Fine-ruled typographic Features Catalog */
+.catalog-section {
+  padding: 120px 0;
+  border-top: 1px solid var(--border-muted);
+}
+
+.catalog-header {
+  font-family: var(--font-sans);
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+  margin-bottom: 60px;
+  color: var(--foreground);
+}
+
+.catalog-item {
+  display: grid;
+  grid-template-columns: 1fr;
+  padding: 56px 0;
+  border-bottom: 1px solid var(--border-muted);
+  gap: 24px;
+  align-items: start;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: default;
+}
+
+.catalog-item:hover {
+  padding-left: 20px;
+  border-bottom-color: var(--accent);
+}
+
+.catalog-item:hover .catalog-number {
+  color: var(--accent);
+}
+
+.catalog-item:hover .catalog-title {
+  color: var(--accent);
+}
+
+@media (min-width: 768px) {
+  .catalog-item {
+    grid-template-columns: 120px 1.5fr 2fr;
+  }
+}
+
+.catalog-number {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  color: var(--zinc-500);
+  font-weight: 700;
+}
+
+.catalog-title {
+  font-size: 1.65rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--foreground);
+  text-transform: uppercase;
+}
+
+.catalog-desc {
+  font-size: 1rem;
+  color: var(--zinc-400);
+  line-height: 1.65;
+  margin: 0;
+}
+
+/* Stepper rail */
+.timeline-section {
+  padding: 120px 0;
+  border-top: 1px solid var(--border-muted);
+}
+
+.timeline-rail {
+  position: relative;
+  max-width: 720px;
+  margin: 80px auto 40px auto;
+  padding-left: 60px;
+  border-left: 1px solid var(--border-muted);
+}
+
+.timeline-step {
+  position: relative;
+  margin-bottom: 96px;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: default;
+}
+
+.timeline-step:hover {
+  transform: translateX(8px);
+}
+
+.timeline-step:hover .timeline-marker {
+  border-color: var(--accent);
+  box-shadow: 0 0 15px var(--accent-glow);
+}
+
+.timeline-step:last-child {
+  margin-bottom: 0;
+}
+
+.timeline-marker {
+  position: absolute;
+  left: -71px;
+  top: 4px;
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--border-active);
+  background: var(--background);
+  box-shadow: 0 0 0 4px var(--background);
+  transition: border-color 0.3s ease;
+}
+
+.timeline-marker.active {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.timeline-subtitle {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  margin-bottom: 8px;
+  display: block;
+  font-weight: 700;
+}
+
+.timeline-heading {
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+  margin: 0 0 12px 0;
+  text-transform: uppercase;
+}
+
+.timeline-desc {
+  font-size: 0.95rem;
+  color: var(--zinc-400);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Minimal footer */
+.minimal-footer {
+  border-top: 1px solid var(--border-muted);
+  padding: 80px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--zinc-500);
+}
+
+
+
