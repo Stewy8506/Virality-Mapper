@@ -1,6 +1,6 @@
 # Virality Mapper - 3-Agent LinkedIn Debate Arena 🚀
 
-An advanced, premium multi-agent LinkedIn post workspace inspired by collaborative human brainstorming. Instead of using pre-defined static personas with a simple single-pass Judge, the system runs **three specialist copywriting agents** concurrently, exposes their drafts to a **bidirectional peer review critique arena**, refines the posts using peer feedback, and synthesizes the absolute best possible viral outcome grounded by **real-time LinkedIn search trends**.
+   An advanced, premium multi-agent LinkedIn post workspace inspired by collaborative human brainstorming. Instead of using pre-defined static personas with a simple single-pass Judge, the system runs **three specialist copywriting agents** concurrently, exposes their drafts to a **bidirectional peer review critique arena**, refines the posts using peer feedback, and synthesizes the absolute best possible viral outcome grounded by **real-time LinkedIn search trends**.
 
 ---
 

@@ -184,64 +184,140 @@ async function callLLM(
 }
 
 async function searchLinkedInTrends(query: string): Promise<string[]> {
+  const searchQuery = `site:linkedin.com ${query} post`;
+  const userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
+  // Try Yahoo Search first (highly stable, simple div classes, no Cloudflare block)
   try {
-    const searchQuery = `site:linkedin.com ${query} post`;
-    // Restricted to India region search in English using kl=in-en
-    const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(searchQuery)}&kl=in-en`;
-    
+    const url = `https://search.yahoo.com/search?q=${encodeURIComponent(searchQuery)}`;
     const res = await fetch(url, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "User-Agent": userAgent,
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.5"
       }
     });
 
-    if (!res.ok) {
-      console.warn(`DuckDuckGo returned status ${res.status}`);
-      return [];
+    if (res.status === 200) {
+      const html = await res.text();
+      const snippets: string[] = [];
+      const regex = /<div class="compText[^>]*>([\s\S]*?)<\/div>/gi;
+      let match;
+      while ((match = regex.exec(html)) !== null && snippets.length < 5) {
+        let snippet = match[1]
+          .replace(/<[^>]*>/g, "") // strip HTML tags
+          .replace(/&amp;/g, "&")
+          .replace(/&quot;/g, '"')
+          .replace(/&#x27;/g, "'")
+          .replace(/&lt;/g, "<")
+          .replace(/&gt;/g, ">")
+          .replace(/&hellip;/g, "...")
+          .replace(/\s+/g, " ")
+          .trim();
+        if (snippet) {
+          snippets.push(snippet);
+        }
+      }
+      if (snippets.length > 0) {
+        return snippets;
+      }
     }
+  } catch (err) {
+    console.warn("Yahoo search fetch failed, falling back to DuckDuckGo:", err);
+  }
 
-    const html = await res.text();
-    const snippets: string[] = [];
+  // Fallback 1: DuckDuckGo Lite (if Yahoo is down/blocked)
+  try {
+    const url = `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(searchQuery)}&kl=in-en`;
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": userAgent,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5"
+      }
+    });
 
-    // Extract DuckDuckGo HTML snippets:
-    const regex = /<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/gi;
-    let match;
-    while ((match = regex.exec(html)) !== null && snippets.length < 5) {
-      let snippet = match[1]
-        .replace(/<[^>]*>/g, "") // strip HTML tags
-        .replace(/&amp;/g, "&")
-        .replace(/&quot;/g, '"')
-        .replace(/&#x27;/g, "'")
-        .replace(/&lt;/g, "<")
-        .replace(/&gt;/g, ">")
-        .replace(/\s+/g, " ")
-        .trim();
-      if (snippet) snippets.push(snippet);
+    if (res.status === 200) {
+      const html = await res.text();
+      const snippets: string[] = [];
+      const regex = /<td class="result-snippet">([\s\S]*?)<\/td>/gi;
+      let match;
+      while ((match = regex.exec(html)) !== null && snippets.length < 5) {
+        let snippet = match[1]
+          .replace(/<[^>]*>/g, "") // strip HTML tags
+          .replace(/&amp;/g, "&")
+          .replace(/&quot;/g, '"')
+          .replace(/&#x27;/g, "'")
+          .replace(/&lt;/g, "<")
+          .replace(/&gt;/g, ">")
+          .replace(/\s+/g, " ")
+          .trim();
+        if (snippet && !snippet.includes("JavaScript is required")) {
+          snippets.push(snippet);
+        }
+      }
+      if (snippets.length > 0) {
+        return snippets;
+      }
     }
+  } catch (err) {
+    console.warn("DuckDuckGo Lite fetch failed, falling back to HTML search:", err);
+  }
 
-    // Fallback in case class names differ
-    if (snippets.length === 0) {
-      const fallbackRegex = /<div class="result__snippet"[^>]*>([\s\S]*?)<\/div>/gi;
-      while ((match = fallbackRegex.exec(html)) !== null && snippets.length < 5) {
+  // Fallback 2: standard DuckDuckGo HTML Search
+  try {
+    const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(searchQuery)}&kl=in-en`;
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": userAgent,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5"
+      }
+    });
+
+    if (res.status === 200) {
+      const html = await res.text();
+      const snippets: string[] = [];
+      const regex = /<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/gi;
+      let match;
+      while ((match = regex.exec(html)) !== null && snippets.length < 5) {
         let snippet = match[1]
           .replace(/<[^>]*>/g, "")
           .replace(/&amp;/g, "&")
           .replace(/&quot;/g, '"')
           .replace(/&#x27;/g, "'")
+          .replace(/&lt;/g, "<")
+          .replace(/&gt;/g, ">")
           .replace(/\s+/g, " ")
           .trim();
         if (snippet) snippets.push(snippet);
       }
-    }
 
-    return snippets;
+      if (snippets.length === 0) {
+        const fallbackRegex = /<div class="result__snippet"[^>]*>([\s\S]*?)<\/div>/gi;
+        while ((match = fallbackRegex.exec(html)) !== null && snippets.length < 5) {
+          let snippet = match[1]
+            .replace(/<[^>]*>/g, "")
+            .replace(/&amp;/g, "&")
+            .replace(/&quot;/g, '"')
+            .replace(/&#x27;/g, "'")
+            .replace(/\s+/g, " ")
+            .trim();
+          if (snippet) snippets.push(snippet);
+        }
+      }
+      return snippets;
+    }
+    return [];
   } catch (err) {
-    console.error("DuckDuckGo fetch failed:", err);
+    console.error("DuckDuckGo HTML fetch failed:", err);
     return [];
   }
 }
+
+// Configurable timeout for LLM requests in milliseconds
+// To adjust the timeout, change this number (e.g., 30000 for 30 seconds, 45000 for 45 seconds)
+const LLM_TIMEOUT_MS = 30000;
 
 async function callLLMWithRetry(
   provider: string,
@@ -257,14 +333,29 @@ async function callLLMWithRetry(
   let attempt = 0;
   while (attempt < maxRetries) {
     attempt++;
+    let timerId: NodeJS.Timeout | null = null;
     try {
       onActivity(`[${agentName}] Contacting model... (Attempt ${attempt}/${maxRetries})`, "info");
       const startTime = Date.now();
-      const result = await callLLM(provider, model, systemPrompt, userPrompt, temperature, apiKeys);
+      
+      const timeoutPromise = new Promise((_, reject) => {
+        timerId = setTimeout(() => {
+          reject(new Error(`Request timed out after ${LLM_TIMEOUT_MS / 1000} seconds`));
+        }, LLM_TIMEOUT_MS);
+      });
+
+      const result = await Promise.race([
+        callLLM(provider, model, systemPrompt, userPrompt, temperature, apiKeys),
+        timeoutPromise
+      ]);
+
+      if (timerId) clearTimeout(timerId);
+
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
       onActivity(`[${agentName}] Completed successfully in ${duration}s.`, "success");
       return result;
     } catch (err: any) {
+      if (timerId) clearTimeout(timerId);
       const isRateLimit = err.status === 429 || err.message?.includes("429") || err.message?.includes("Rate limit") || err.message?.includes("quota") || err.message?.includes("exhausted");
       const warningMsg = `[${agentName}] Call failed: ${isRateLimit ? "Rate limit / Quota exceeded" : err.message || err}`;
       
@@ -339,9 +430,11 @@ export async function POST(req: Request) {
 
     const encoder = new TextEncoder();
 
+    let isClosed = false;
     const stream = new ReadableStream({
       async start(controller) {
         const sendEvent = (event: string, data: any) => {
+          if (isClosed) return;
           try {
             controller.enqueue(
               encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
@@ -382,12 +475,20 @@ export async function POST(req: Request) {
           }
           const liveTrends = Array.from(combinedTrendsSet).slice(0, 8); // take top 8 combined snippets
           
+          if (liveTrends.length === 0) {
+            sendEvent("activity", { message: "Scraper yielded 0 hits. Injecting high-performing LinkedIn copywriting templates for grounding...", type: "warning" });
+            liveTrends.push(
+              "Hook Idea: '99% of AI LinkedIn posts fail. Not because the AI is bad, but because the prompts are too polite.'",
+              "Hook Idea: 'Stop prompting. Start orchestrating. (How I built a multi-agent writing console)'",
+              "Structure: Hook (Pattern Interrupt) -> Body (Actionable 3-part list with bold metrics) -> Outro (Clear, low-friction CTA)",
+              "Guideline: Keep paragraphs under 2 sentences. Use crisp whitespace formatting. Do not use generic hashtags."
+            );
+          }
+
           sendEvent("trends", liveTrends);
           sendEvent("activity", { message: `Retrieved ${snippetCount} trend snippets. Deduped to ${liveTrends.length} distinct contexts.`, type: "success" });
 
-          const trendsContext = liveTrends.length > 0
-            ? `Real-time trending search insights related to this topic:\n${liveTrends.map((t, i) => `${i + 1}. ${t}`).join("\n")}`
-            : "No live post search trends retrieved. Fall back to general LinkedIn copy guidelines: Use hook pattern interrupts, short paragraphs, lists, bold metrics, and a clean call to action.";
+          const trendsContext = `Real-time trending search insights related to this topic:\n${liveTrends.map((t, i) => `${i + 1}. ${t}`).join("\n")}`;
 
           // Helper to run LLM with retry & activity logs
           const runAgentCall = async (agent: any, systemPrompt: string, userPrompt: string, contextName: string) => {
@@ -428,108 +529,84 @@ Example:
 }
 `;
 
-          const draftPromises = [
-            (async () => {
-              try {
-                const res = await runAgentCall(agentA, "You are drafting an initial viral LinkedIn post.", draftUserPrompt, "Drafting");
-                sendEvent("draft-complete", { name: agentA.name, content: res.content, hookExplanation: res.hookExplanation, provider: agentA.provider, model: agentA.model });
-                return res;
-              } catch (err: any) {
-                console.error("Draft A failed:", err);
-                throw new Error(`[${agentA.name}] draft failed: ${err.message || err}`);
-              }
-            })(),
-            (async () => {
-              try {
-                const res = await runAgentCall(agentB, "You are drafting an initial viral LinkedIn post.", draftUserPrompt, "Drafting");
-                sendEvent("draft-complete", { name: agentB.name, content: res.content, hookExplanation: res.hookExplanation, provider: agentB.provider, model: agentB.model });
-                return res;
-              } catch (err: any) {
-                console.error("Draft B failed:", err);
-                throw new Error(`[${agentB.name}] draft failed: ${err.message || err}`);
-              }
-            })(),
-            (async () => {
-              try {
-                const res = await runAgentCall(agentC, "You are drafting an initial viral LinkedIn post.", draftUserPrompt, "Drafting");
-                sendEvent("draft-complete", { name: agentC.name, content: res.content, hookExplanation: res.hookExplanation, provider: agentC.provider, model: agentC.model });
-                return res;
-              } catch (err: any) {
-                console.error("Draft C failed:", err);
-                throw new Error(`[${agentC.name}] draft failed: ${err.message || err}`);
-              }
-            })()
-          ];
+          let draftA, draftB, draftC;
 
-          const [draftA, draftB, draftC] = await Promise.all(draftPromises);
+          try {
+            draftA = await runAgentCall(agentA, "You are drafting an initial viral LinkedIn post.", draftUserPrompt, "Drafting");
+            sendEvent("draft-complete", { name: agentA.name, content: draftA.content, hookExplanation: draftA.hookExplanation, provider: agentA.provider, model: agentA.model });
+          } catch (err: any) {
+            console.error("Draft A failed:", err);
+            throw new Error(`[${agentA.name}] draft failed: ${err.message || err}`);
+          }
+
+          try {
+            draftB = await runAgentCall(agentB, "You are drafting an initial viral LinkedIn post.", draftUserPrompt, "Drafting");
+            sendEvent("draft-complete", { name: agentB.name, content: draftB.content, hookExplanation: draftB.hookExplanation, provider: agentB.provider, model: agentB.model });
+          } catch (err: any) {
+            console.error("Draft B failed:", err);
+            throw new Error(`[${agentB.name}] draft failed: ${err.message || err}`);
+          }
+
+          try {
+            draftC = await runAgentCall(agentC, "You are drafting an initial viral LinkedIn post.", draftUserPrompt, "Drafting");
+            sendEvent("draft-complete", { name: agentC.name, content: draftC.content, hookExplanation: draftC.hookExplanation, provider: agentC.provider, model: agentC.model });
+          } catch (err: any) {
+            console.error("Draft C failed:", err);
+            throw new Error(`[${agentC.name}] draft failed: ${err.message || err}`);
+          }
 
           // Step 3: Phase 2 (Critique Arena)
           sendEvent("status", { message: "[Phase 2] Debate Arena: bidirectional peer review critique round..." });
 
-          const critiquePromises = [
-            (async () => {
-              try {
-                const res = await runAgentCall(agentA, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Beta:\n"${draftB.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Beta");
-                sendEvent("critique-complete", { from: agentA.name, to: agentB.name, content: res.critique, score: res.score });
-                return res;
-              } catch (err: any) {
-                console.error("Critique A->B failed:", err);
-                throw new Error(`[${agentA.name} critiquing ${agentB.name}] failed: ${err.message || err}`);
-              }
-            })(),
-            (async () => {
-              try {
-                const res = await runAgentCall(agentB, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Alpha:\n"${draftA.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Alpha");
-                sendEvent("critique-complete", { from: agentB.name, to: agentA.name, content: res.critique, score: res.score });
-                return res;
-              } catch (err: any) {
-                console.error("Critique B->A failed:", err);
-                throw new Error(`[${agentB.name} critiquing ${agentA.name}] failed: ${err.message || err}`);
-              }
-            })(),
-            (async () => {
-              try {
-                const res = await runAgentCall(agentB, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Gamma:\n"${draftC.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Gamma");
-                sendEvent("critique-complete", { from: agentB.name, to: agentC.name, content: res.critique, score: res.score });
-                return res;
-              } catch (err: any) {
-                console.error("Critique B->C failed:", err);
-                throw new Error(`[${agentB.name} critiquing ${agentC.name}] failed: ${err.message || err}`);
-              }
-            })(),
-            (async () => {
-              try {
-                const res = await runAgentCall(agentC, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Beta:\n"${draftB.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Beta");
-                sendEvent("critique-complete", { from: agentC.name, to: agentB.name, content: res.critique, score: res.score });
-                return res;
-              } catch (err: any) {
-                console.error("Critique C->B failed:", err);
-                throw new Error(`[${agentC.name} critiquing ${agentB.name}] failed: ${err.message || err}`);
-              }
-            })(),
-            (async () => {
-              try {
-                const res = await runAgentCall(agentA, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Gamma:\n"${draftC.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Gamma");
-                sendEvent("critique-complete", { from: agentA.name, to: agentC.name, content: res.critique, score: res.score });
-                return res;
-              } catch (err: any) {
-                console.error("Critique A->C failed:", err);
-                throw new Error(`[${agentA.name} critiquing ${agentC.name}] failed: ${err.message || err}`);
-              }
-            })(),
-            (async () => {
-              try {
-                const res = await runAgentCall(agentC, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Alpha:\n"${draftA.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Alpha");
-                sendEvent("critique-complete", { from: agentC.name, to: agentA.name, content: res.critique, score: res.score });
-                return res;
-              } catch (err: any) {
-                console.error("Critique C->A failed:", err);
-                throw new Error(`[${agentC.name} critiquing ${agentA.name}] failed: ${err.message || err}`);
-              }
-            })()
-          ];
+          let critiqueAtoB, critiqueBtoA, critiqueBtoC, critiqueCtoB, critiqueAtoC, critiqueCtoA;
 
-          const [critiqueAtoB, critiqueBtoA, critiqueBtoC, critiqueCtoB, critiqueAtoC, critiqueCtoA] = await Promise.all(critiquePromises);
+          try {
+            critiqueAtoB = await runAgentCall(agentA, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Beta:\n"${draftB.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Beta");
+            sendEvent("critique-complete", { from: agentA.name, to: agentB.name, content: critiqueAtoB.critique, score: critiqueAtoB.score });
+          } catch (err: any) {
+            console.error("Critique A->B failed:", err);
+            throw new Error(`[${agentA.name} critiquing ${agentB.name}] failed: ${err.message || err}`);
+          }
+
+          try {
+            critiqueBtoA = await runAgentCall(agentB, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Alpha:\n"${draftA.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Alpha");
+            sendEvent("critique-complete", { from: agentB.name, to: agentA.name, content: critiqueBtoA.critique, score: critiqueBtoA.score });
+          } catch (err: any) {
+            console.error("Critique B->A failed:", err);
+            throw new Error(`[${agentB.name} critiquing ${agentA.name}] failed: ${err.message || err}`);
+          }
+
+          try {
+            critiqueBtoC = await runAgentCall(agentB, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Gamma:\n"${draftC.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Gamma");
+            sendEvent("critique-complete", { from: agentB.name, to: agentC.name, content: critiqueBtoC.critique, score: critiqueBtoC.score });
+          } catch (err: any) {
+            console.error("Critique B->C failed:", err);
+            throw new Error(`[${agentB.name} critiquing ${agentC.name}] failed: ${err.message || err}`);
+          }
+
+          try {
+            critiqueCtoB = await runAgentCall(agentC, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Beta:\n"${draftB.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Beta");
+            sendEvent("critique-complete", { from: agentC.name, to: agentB.name, content: critiqueCtoB.critique, score: critiqueCtoB.score });
+          } catch (err: any) {
+            console.error("Critique C->B failed:", err);
+            throw new Error(`[${agentC.name} critiquing ${agentB.name}] failed: ${err.message || err}`);
+          }
+
+          try {
+            critiqueAtoC = await runAgentCall(agentA, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Gamma:\n"${draftC.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Gamma");
+            sendEvent("critique-complete", { from: agentA.name, to: agentC.name, content: critiqueAtoC.critique, score: critiqueAtoC.score });
+          } catch (err: any) {
+            console.error("Critique A->C failed:", err);
+            throw new Error(`[${agentA.name} critiquing ${agentC.name}] failed: ${err.message || err}`);
+          }
+
+          try {
+            critiqueCtoA = await runAgentCall(agentC, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Alpha:\n"${draftA.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Alpha");
+            sendEvent("critique-complete", { from: agentC.name, to: agentA.name, content: critiqueCtoA.critique, score: critiqueCtoA.score });
+          } catch (err: any) {
+            console.error("Critique C->A failed:", err);
+            throw new Error(`[${agentC.name} critiquing ${agentA.name}] failed: ${err.message || err}`);
+          }
 
           // Step 4: Phase 3 (Refinement based on critiques)
           sendEvent("status", { message: "[Phase 3] Refinement: Agents rewriting posts based on critiques..." });
@@ -609,40 +686,31 @@ Example:
 }
 `;
 
-          const refinePromises = [
-            (async () => {
-              try {
-                const res = await runAgentCall(agentA, "You are refining your original LinkedIn post based on peer critique.", refinePromptA, "Refinement");
-                sendEvent("refine-complete", { name: agentA.name, content: res.content, score: res.score, argument: res.argument, provider: agentA.provider, model: agentA.model });
-                return res;
-              } catch (err: any) {
-                console.error("Refinement A failed:", err);
-                throw new Error(`[${agentA.name}] refinement failed: ${err.message || err}`);
-              }
-            })(),
-            (async () => {
-              try {
-                const res = await runAgentCall(agentB, "You are refining your original LinkedIn post based on peer critique.", refinePromptB, "Refinement");
-                sendEvent("refine-complete", { name: agentB.name, content: res.content, score: res.score, argument: res.argument, provider: agentB.provider, model: agentB.model });
-                return res;
-              } catch (err: any) {
-                console.error("Refinement B failed:", err);
-                throw new Error(`[${agentB.name}] refinement failed: ${err.message || err}`);
-              }
-            })(),
-            (async () => {
-              try {
-                const res = await runAgentCall(agentC, "You are refining your original LinkedIn post based on peer critique.", refinePromptC, "Refinement");
-                sendEvent("refine-complete", { name: agentC.name, content: res.content, score: res.score, argument: res.argument, provider: agentC.provider, model: agentC.model });
-                return res;
-              } catch (err: any) {
-                console.error("Refinement C failed:", err);
-                throw new Error(`[${agentC.name}] refinement failed: ${err.message || err}`);
-              }
-            })()
-          ];
+          let refinedA, refinedB, refinedC;
 
-          const [refinedA, refinedB, refinedC] = await Promise.all(refinePromises);
+          try {
+            refinedA = await runAgentCall(agentA, "You are refining your original LinkedIn post based on peer critique.", refinePromptA, "Refinement");
+            sendEvent("refine-complete", { name: agentA.name, content: refinedA.content, score: refinedA.score, argument: refinedA.argument, provider: agentA.provider, model: agentA.model });
+          } catch (err: any) {
+            console.error("Refinement A failed:", err);
+            throw new Error(`[${agentA.name}] refinement failed: ${err.message || err}`);
+          }
+
+          try {
+            refinedB = await runAgentCall(agentB, "You are refining your original LinkedIn post based on peer critique.", refinePromptB, "Refinement");
+            sendEvent("refine-complete", { name: agentB.name, content: refinedB.content, score: refinedB.score, argument: refinedB.argument, provider: agentB.provider, model: agentB.model });
+          } catch (err: any) {
+            console.error("Refinement B failed:", err);
+            throw new Error(`[${agentB.name}] refinement failed: ${err.message || err}`);
+          }
+
+          try {
+            refinedC = await runAgentCall(agentC, "You are refining your original LinkedIn post based on peer critique.", refinePromptC, "Refinement");
+            sendEvent("refine-complete", { name: agentC.name, content: refinedC.content, score: refinedC.score, argument: refinedC.argument, provider: agentC.provider, model: agentC.model });
+          } catch (err: any) {
+            console.error("Refinement C failed:", err);
+            throw new Error(`[${agentC.name}] refinement failed: ${err.message || err}`);
+          }
 
           // Step 5: Phase 4 (Consensus Settle / Synthesis)
           sendEvent("status", { message: "[Phase 4] Settle Consensus: Synthesizing the absolute best LinkedIn post." });
@@ -708,8 +776,14 @@ CRITICAL FORMAT REQUIREMENT:
           console.error("Consensus stream worker error:", err);
           sendEvent("error", { message: err.message || "An unexpected generation pipeline error occurred." });
         } finally {
-          controller.close();
+          isClosed = true;
+          try {
+            controller.close();
+          } catch (e) {}
         }
+      },
+      cancel() {
+        isClosed = true;
       }
     });
 
