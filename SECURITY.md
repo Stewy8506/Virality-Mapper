@@ -16,7 +16,7 @@ The table below outlines the versions of Vantage AI that actively receive securi
 We take the security of Vantage AI very seriously. If you discover a potential vulnerability or security flaw (especially regarding API key transmission or Request Forgery), please **do not open a public issue or pull request**.
 
 Instead, report vulnerabilities privately by emailing the developer at:
-**[anuvab@anv.dev](mailto:dasanuvab38@gmail.com)**
+**[dasanuvab38@gmail.com](mailto:dasanuvab38@gmail.com)**
 
 Please include:
 - A detailed description of the vulnerability.

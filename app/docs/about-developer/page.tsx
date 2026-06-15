@@ -346,9 +346,9 @@ export default function AboutDeveloperPage() {
         </h2>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", marginTop: "16px" }}>
           {[
-            { label: "anv.dev", url: "https://anv.dev", icon: <Globe size={14} /> },
-            { label: "GitHub", url: "https://github.com/anuvabdas", icon: <GitBranch size={14} /> },
-            { label: "LinkedIn", url: "https://linkedin.com/in/anuvabdas", icon: <Briefcase size={14} /> },
+            { label: "anv.dev", url: "https://anvv.tech", icon: <Globe size={14} /> },
+            { label: "GitHub", url: "https://github.com/Stewy8506", icon: <GitBranch size={14} /> },
+            { label: "LinkedIn", url: "https://www.linkedin.com/in/anv-dev/", icon: <Briefcase size={14} /> },
             { label: "Twitter / X", url: "https://twitter.com/anuvab_das", icon: <MessageSquare size={14} /> },
           ].map((social) => (
             <a

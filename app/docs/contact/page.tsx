@@ -44,7 +44,7 @@ export default function ContactPage() {
     // Prepare mailto link
     const mailtoSubject = `${formData.subject} - from ${formData.name}`;
     const mailtoBody = `Sender Name: ${formData.name}\nSender Email: ${formData.email}\n\nMessage:\n${formData.message}`;
-    const mailtoUrl = `mailto:anuvab@anv.dev?subject=${encodeURIComponent(mailtoSubject)}&body=${encodeURIComponent(mailtoBody)}`;
+    const mailtoUrl = `mailto:dasanuvab38@gmail.com?subject=${encodeURIComponent(mailtoSubject)}&body=${encodeURIComponent(mailtoBody)}`;
 
     // Open mail client after a small delay
     setTimeout(() => {
@@ -87,7 +87,7 @@ export default function ContactPage() {
               <h3 style={{ margin: 0, color: "var(--zinc-100)" }}>Message Encoded</h3>
               <p style={{ margin: 0, color: "var(--zinc-400)", fontSize: "0.875rem", lineHeight: 1.6 }}>
                 Opening your email client to dispatch the message. If it doesn't open automatically,
-                you can manually write to <strong style={{ color: "var(--accent)" }}>anuvab@anv.dev</strong>.
+                you can manually write to <strong style={{ color: "var(--accent)" }}>dasanuvab38@gmail.com</strong>.
               </p>
               <button
                 onClick={() => setStatus("idle")}
@@ -224,7 +224,7 @@ export default function ContactPage() {
                 <div style={{ color: "var(--accent)" }}><Mail size={16} /></div>
                 <div style={{ display: "flex", flexDirection: "column" }}>
                   <span style={{ fontSize: "0.6rem", textTransform: "uppercase", color: "var(--zinc-500)" }}>Primary Email</span>
-                  <a href="mailto:anuvab@anv.dev" style={{ fontSize: "0.85rem", color: "var(--zinc-200)", textDecoration: "none" }}>anuvab@anv.dev</a>
+                  <a href="mailto:dasanuvab38@gmail.com" style={{ fontSize: "0.85rem", color: "var(--zinc-200)", textDecoration: "none" }}>dasanuvab38@gmail.com</a>
                 </div>
               </div>
 
@@ -232,7 +232,7 @@ export default function ContactPage() {
                 <div style={{ color: "var(--accent)" }}><Globe size={16} /></div>
                 <div style={{ display: "flex", flexDirection: "column" }}>
                   <span style={{ fontSize: "0.6rem", textTransform: "uppercase", color: "var(--zinc-500)" }}>Personal Domain</span>
-                  <a href="https://anv.dev" target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.85rem", color: "var(--zinc-200)", textDecoration: "none" }}>https://anv.dev</a>
+                  <a href="https://anvv.tech" target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.85rem", color: "var(--zinc-200)", textDecoration: "none" }}>https://anvv.tech</a>
                 </div>
               </div>
             </div>
