@@ -1,5 +1,7 @@
 import { ImageResponse } from "next/og";
 
+export const runtime = "edge";
+
 export const alt = "Vantage AI - AI LinkedIn Copywriting Arena";
 export const size = {
   width: 1200,
@@ -13,8 +15,6 @@ export default function Image() {
       <div
         style={{
           background: "#09090b",
-          backgroundImage: "radial-gradient(circle at 600px 315px, rgba(255, 255, 255, 0.04) 0%, transparent 60%), linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px)",
-          backgroundSize: "100% 100%, 240px 100%",
           width: "100%",
           height: "100%",
           display: "flex",

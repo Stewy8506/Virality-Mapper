@@ -20,7 +20,12 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://vantage-theta-five.vercel.app/"),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || 
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : 
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
+    "https://vantage-theta-five.vercel.app/"))
+  ),
   title: {
     default: "Vantage AI | Premium AI LinkedIn Ghostwriter",
     template: "%s | Vantage AI",
