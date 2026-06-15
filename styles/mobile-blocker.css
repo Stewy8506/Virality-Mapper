@@ -1,0 +1,324 @@
+/* Mobile Blocker Layout & Styles */
+
+.mobile-blocker-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.mobile-blocker-page-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* By default, hide the blocker overlay on desktop viewports */
+.mobile-blocker-overlay {
+  display: none !important;
+}
+
+/* Media query to activate blocking on viewports <= 767px */
+@media (max-width: 767px) {
+  .mobile-blocker-root.is-blocked .mobile-blocker-page-content {
+    display: none !important;
+  }
+
+  .mobile-blocker-root.is-blocked .mobile-blocker-overlay {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    width: 100vw;
+    position: fixed;
+    inset: 0;
+    background-color: var(--background);
+    padding: 24px;
+    z-index: 99999;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Ambient glow orb behind the card */
+.mobile-blocker-bg-ambient {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 320px;
+  height: 320px;
+  background: var(--accent);
+  filter: blur(130px);
+  opacity: 0.1;
+  pointer-events: none;
+  border-radius: 50%;
+  z-index: 0;
+}
+
+/* Glassmorphic main card */
+.mobile-blocker-card {
+  position: relative;
+  background: var(--panel-bg);
+  border: 1px solid var(--border-muted);
+  border-radius: 24px;
+  padding: 40px 24px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 
+    0 30px 60px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  overflow: hidden;
+}
+
+/* Top accent color glow within card */
+.mobile-blocker-accent-glow {
+  position: absolute;
+  top: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 160px;
+  height: 160px;
+  background: var(--accent);
+  filter: blur(60px);
+  opacity: 0.15;
+  pointer-events: none;
+  border-radius: 50%;
+}
+
+/* Animated graphic showing phone locked inside desktop viewport */
+.mobile-blocker-graphic {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 100px;
+  margin-bottom: 28px;
+}
+
+.graphic-desktop {
+  color: var(--foreground);
+  opacity: 0.85;
+}
+
+.icon-desktop {
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3));
+}
+
+.graphic-phone {
+  position: absolute;
+  bottom: 0px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel-bg-solid);
+  border: 1px solid var(--border-active);
+  padding: 6px;
+  border-radius: 8px;
+  color: var(--accent);
+  box-shadow: 
+    0 10px 20px rgba(0, 0, 0, 0.5),
+    0 0 0 1px var(--accent-glow);
+}
+
+.phone-lock-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: var(--accent);
+  color: var(--background);
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Micro-badge */
+.mobile-blocker-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent-glow);
+  border: 1px solid var(--border-active);
+  padding: 6px 14px;
+  border-radius: 100px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-family: var(--font-mono), monospace;
+  color: var(--accent);
+  letter-spacing: 0.08em;
+  margin-bottom: 20px;
+}
+
+.badge-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--accent);
+  animation: pulse-dot 2s infinite ease-in-out;
+}
+
+@keyframes pulse-dot {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.9);
+    opacity: 0.6;
+  }
+}
+
+/* Typography */
+.mobile-blocker-title {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+}
+
+.mobile-blocker-text {
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--zinc-400);
+  margin-bottom: 24px;
+  padding: 0 4px;
+}
+
+/* Specifications block */
+.mobile-blocker-specs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--border-muted);
+  border-radius: 12px;
+  padding: 12px 20px;
+  width: 100%;
+  margin-bottom: 28px;
+}
+
+/* Fix for Alabaster theme which is light */
+html[data-theme="alabaster"] .mobile-blocker-specs {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.spec-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.spec-label {
+  font-size: 0.65rem;
+  font-family: var(--font-mono), monospace;
+  color: var(--zinc-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.spec-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--foreground);
+  font-family: var(--font-mono), monospace;
+}
+
+.spec-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border-muted);
+}
+
+.mobile-blocker-divider {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(
+    90deg, 
+    transparent, 
+    var(--border-muted) 15%, 
+    var(--border-muted) 85%, 
+    transparent
+  );
+  margin-bottom: 24px;
+}
+
+/* Action buttons styling */
+.mobile-blocker-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.btn-blocker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 100%;
+  cursor: pointer;
+}
+
+.btn-blocker.btn-primary {
+  background: var(--accent);
+  color: var(--background);
+  border: 1px solid var(--accent);
+}
+
+.btn-blocker.btn-primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.btn-blocker.btn-secondary {
+  background: transparent;
+  color: var(--foreground);
+  border: 1px solid var(--border-active);
+}
+
+.btn-blocker.btn-secondary:hover {
+  background: var(--accent-glow);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+/* Footer info */
+.mobile-blocker-footer {
+  margin-top: 32px;
+  font-size: 0.65rem;
+  font-family: var(--font-mono), monospace;
+  color: var(--zinc-500);
+  letter-spacing: 0.05em;
+  z-index: 1;
+}

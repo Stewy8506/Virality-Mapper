@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Outfit } from "next/font/google";
 import LenisProvider from "@/components/LenisProvider";
+import MobileBlocker from "@/components/MobileBlocker";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -123,7 +124,9 @@ export default function RootLayout({
       </head>
       <body>
         <LenisProvider>
-          {children}
+          <MobileBlocker>
+            {children}
+          </MobileBlocker>
         </LenisProvider>
       </body>
     </html>
