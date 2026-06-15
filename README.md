@@ -117,6 +117,19 @@ The 3 refined drafts, their critique histories, and self-change arguments are co
 - **Persistent Credentials & Configurations**: All configurations, API connections, agent templates, custom metrics, and history logs are serialized into a master `vm_master_config` state in `localStorage` in a backward-compatible format. No data is reset on refresh, and no credentials ever touch a database.
 - **Config Backups & Factory Resets**: Export a full JSON config file, import configuration files with validation, or run a factory reset to wipe local browser cache via the Admin Console tab.
 
+### 🔒 Secure Credentials Model & Rate Limiting
+- **AES-256-GCM Session Encryption**: Raw API keys are never sent in generation request bodies. Instead, they are securely synchronized to a server-side endpoint `/api/session`, which encrypts the payload using Node's native `crypto` engine and stores them in a secure `HttpOnly`, `Secure`, `SameSite=Strict` cookie (`vm_session`).
+- **Payload Sanitization**: Automatic parsing limits ensure incoming generation request bodies are strictly capped at **1MB** to prevent denial-of-service attacks.
+- **Route-Level Rate Limiting**: Model lookup query endpoints (`/api/models`) are wrapped with dynamic IP rate-limiting to prevent endpoint abuse.
+
+### ♿ Accessibility & Motion Control
+- **Semantic Labels Binding**: Mapped matching `htmlFor` targets onto all form labels in [PostInputFields.tsx](file:///Users/anv./Documents/workspace/PostInputFields.tsx) to assist screen readers.
+- **Focus Trapping & Key Dismissals**: Added Escape-key modal closure bindings and focus trapping context inside the settings modal drawer.
+- **Thorough Reduced-Motion Support**: 
+  - Automatically disables Lenis smooth scrolling if `prefers-reduced-motion` is detected: [LenisProvider.tsx](file:///Users/anv./Documents/LenisProvider.tsx).
+  - Integrates Framer Motion's `<MotionConfig reducedMotion="user">` to globally suppress all JS-driven layout/timeline animations when the user prefers reduced motion.
+  - Applies CSS overrides to drop hover translations, transitions, loading shimmers, and follow-along spotlight elements in `reduced-motion.css`.
+
 ### Performance & Infrastructure
 - **Flexible Provider Integrations**: Out-of-the-box support for Google Gemini, OpenAI, Anthropic, OpenRouter, local models (Ollama, LM Studio), and custom API proxies.
 - **Configurable LLM Timeouts**: Adjust standard API timeouts (default 30 seconds) via the `LLM_TIMEOUT_MS` constant in [app/api/generate/route.ts](file:///Users/anv./Documents/Virality%20Mapper/app/api/generate/route.ts).
@@ -134,20 +147,19 @@ virality-mapper/
 ├── app/
 │   ├── page.tsx                    # Landing page (interactive visualizers & pipeline stepper)
 │   ├── layout.tsx                  # Root layout with font injection & metadata
-│   ├── globals.css                 # Global CSS variables, themes, and utility classes
+│   ├── globals.css                 # Modular CSS importer pointing to split styles
 │   ├── manifest.ts                 # PWA web app manifest
 │   ├── opengraph-image.tsx         # Dynamic OG image generation
 │   ├── robots.ts                   # robots.txt configuration
 │   ├── sitemap.ts                  # Sitemap generation
-│   ├── api/
-│   │   ├── generate/route.ts       # SSE streaming multi-agent pipeline API
-│   │   └── models/route.ts         # Dynamic model enumeration API
-│   └── workspace/
-│       └── page.tsx                # Full workspace studio page
+│   └── api/
+│       ├── generate/route.ts       # SSE streaming multi-agent pipeline API
+│       ├── models/route.ts         # Dynamic model list API with rate limiting
+│       └── session/route.ts        # Encrypted HttpOnly session cookie API
 │
 ├── components/
 │   ├── AgentPlayground.tsx         # Specialist agent configuration panel
-│   ├── LenisProvider.tsx           # Smooth scroll provider
+│   ├── LenisProvider.tsx           # Smooth scroll & global MotionConfig wrapper
 │   ├── PostGeneratorForm.tsx       # Main generator form orchestrator
 │   ├── ResultsDisplay.tsx          # Results display orchestrator
 │   ├── SettingsModal.tsx           # 8-tab settings modal shell
@@ -172,6 +184,25 @@ virality-mapper/
 │       ├── ModelsTab.tsx           # Model registry & custom endpoints
 │       ├── PersonasTab.tsx         # Focus group persona editor
 │       └── UiTab.tsx               # Theme, font, density & CSS overrides
+│
+├── e2e/
+│   └── smoke.spec.ts               # Playwright E2E smoke test suite
+│
+├── lib/
+│   ├── __tests__/                  # Vitest unit tests suite
+│   ├── crypto.ts                   # AES-256-GCM symmetric encryption utilities
+│   └── scraper/                    # DuckDuckGo and Yahoo recency scraping code
+│
+├── styles/                         # Modular CSS stylesheet components
+│   ├── tokens.css                  # Color themes variables, reset, and scrollbars
+│   ├── settings.css                # Settings drawer specific visual layout
+│   ├── workspace.css               # Workspace studio, grids, log consoles
+│   ├── landing.css                 # Hero typography, spotlight grids, animations
+│   ├── responsive.css              # Device layout break-points
+│   └── reduced-motion.css          # Motion reduction stylesheet overrides
+│
+├── playwright.config.ts            # E2E test configuration
+└── vitest.config.ts                # Unit testing configuration
 ```
 
 ---
@@ -182,12 +213,15 @@ virality-mapper/
 |-------|------------|
 | **Framework** | Next.js 16.2.9 (App Router) |
 | **UI Library** | React 19 |
-| **Styling** | Vanilla CSS with CSS custom properties (no Tailwind runtime) |
+| **Styling** | Modular Vanilla CSS with CSS custom properties (no Tailwind runtime) |
 | **Icons** | Lucide React |
 | **Animations** | Framer Motion 12.x |
 | **Smooth Scroll** | Lenis 1.x |
+| **Cryptography** | Node.js native `crypto` module (AES-256-GCM) |
 | **LLM Providers** | `@google/genai`, `@anthropic-ai/sdk`, `openai` |
 | **Streaming** | Server-Sent Events (SSE) via Next.js API Routes |
+| **E2E Testing** | Playwright Test |
+| **Unit Testing** | Vitest |
 | **Persistence** | Browser `localStorage` (no external database) |
 | **Language** | TypeScript 5 |
 
@@ -214,6 +248,17 @@ virality-mapper/
 
 3. **Open the workspace**:
    Navigate to [http://localhost:3000](http://localhost:3000) in your browser.
+
+### Running Test Suites
+
+- **Unit Tests**:
+  ```bash
+  npm test
+  ```
+- **End-to-End Smoke Tests**:
+  ```bash
+  npm run test:e2e
+  ```
 
 ---
 
