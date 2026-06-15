@@ -2,6 +2,7 @@
 
 import { ReactLenis } from "lenis/react";
 import { ReactNode, useEffect, useState } from "react";
+import { MotionConfig } from "framer-motion";
 
 export default function LenisProvider({ children }: { children: ReactNode }) {
   const [shouldDisableSmoothScroll, setShouldDisableSmoothScroll] = useState(false);
@@ -36,7 +37,9 @@ export default function LenisProvider({ children }: { children: ReactNode }) {
         wheelMultiplier: 1.0,
       }}
     >
-      {children}
+      <MotionConfig reducedMotion="user">
+        {children}
+      </MotionConfig>
     </ReactLenis>
   );
 }

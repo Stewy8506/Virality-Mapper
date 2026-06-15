@@ -8,6 +8,32 @@
     scroll-behavior: auto !important;
   }
 
+  /* Disable all transitions and transitions-property */
+  * {
+    transition: none !important;
+  }
+
+  /* Disable all dynamic translates, scales, and rotates on hover/active states */
+  *:hover,
+  *:active,
+  *.active {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Disable background noise grain overlay, cursor spotlight tracking and spotlight mask */
+  .cursor-spotlight-glow,
+  .grid-spotlight {
+    display: none !important;
+  }
+
+  /* Disable dynamic loading shimmer animations */
+  .shimmer,
+  .shimmer-active {
+    animation: none !important;
+    background: var(--border-muted) !important;
+  }
+
   .animate-spin,
   .animate-pulse,
   .animate-fade-up {
