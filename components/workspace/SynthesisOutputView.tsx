@@ -144,32 +144,33 @@ export default function SynthesisOutputView({
               >
                 {/* Clean editor-style preview pane */}
                 <div
-                  className="p-4 pr-14"
-                  data-lenis-prevent
+                  className="p-6 pb-16 transition-all duration-300"
                   style={{
-                    background: "var(--background)",
-                    border: "1px solid var(--border-muted)",
-                    borderRadius: 0,
+                    background: "rgba(255, 255, 255, 0.012)",
+                    border: "1px solid var(--border-active)",
+                    borderLeft: "4px solid var(--accent)",
+                    borderRadius: "12px",
                     whiteSpace: "pre-wrap",
-                    fontSize: "1.02rem",
-                    lineHeight: 1.7,
+                    fontSize: "1.05rem",
+                    lineHeight: 1.75,
                     color: "var(--foreground)",
-                    minHeight: "220px",
-                    maxHeight: "400px",
-                    overflowY: "auto",
+                    minHeight: "150px",
+                    maxHeight: "none",
                     fontFamily: "var(--font-sans)",
+                    boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 0 40px var(--accent-glow), 0 0 15px var(--accent-glow)",
                   }}
                 >
                   {best.content}
                 </div>
 
-                {/* Circular FAB Copy Button */}
+                {/* Sleek Copy Button */}
                 <button
                   onClick={() => copyToClipboard("best-settled", best.content)}
-                  className="absolute bottom-4 right-4 h-10 w-10 rounded-full flex items-center justify-center bg-accent text-background hover:bg-accent-hover transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg z-20"
+                  className="absolute bottom-4 right-4 action-pill-btn z-20"
                   title={copiedId === "best-settled" ? "Copied!" : "Copy to clipboard"}
                 >
-                  {copiedId === "best-settled" ? <CheckCircle2 size={16} /> : <Copy size={16} />}
+                  {copiedId === "best-settled" ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+                  <span>{copiedId === "best-settled" ? "COPIED" : "COPY"}</span>
                 </button>
               </motion.div>
             ) : (
@@ -225,12 +226,13 @@ export default function SynthesisOutputView({
 
           {/* Rationale Section */}
           <div
-            className="py-3.5 px-5 rounded-r-xl"
+            className="rounded-r-xl"
             style={{
               fontSize: "0.82rem",
               background: "var(--background)",
               borderLeft: "3px solid var(--accent)",
               lineHeight: 1.5,
+              padding: "26px 28px",
             }}
           >
             <div className="flex items-center gap-2 mb-2 text-zinc-400 font-semibold uppercase text-[10px] font-mono tracking-wider">

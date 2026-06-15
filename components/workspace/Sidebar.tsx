@@ -98,7 +98,7 @@ export default function Sidebar({
 
   return (
     <aside className={`sidebar ${isSidebarCollapsed ? "collapsed" : ""} ${isMobileOpen ? "mobile-open" : ""}`} role="navigation" aria-label="Workspace navigation">
-      <div className="flex flex-col gap-6 flex-1 overflow-hidden">
+      <div className="flex flex-col gap-6 flex-1 overflow-hidden" style={{ minHeight: 0 }}>
         {/* Header & toggle menu */}
         <div className="flex items-center justify-between w-full sidebar-header-container">
           <Link href="/" className="brand-text" style={{ textDecoration: "none", cursor: "pointer" }}>
@@ -155,7 +155,7 @@ export default function Sidebar({
         </nav>
 
         {/* Historical Saved Publications integrated */}
-        <div className="flex flex-col gap-2 flex-1 overflow-hidden sidebar-archive-list" style={{ borderTop: "1px solid var(--border-muted)", paddingTop: "16px" }}>
+        <div className="flex flex-col gap-2 flex-1 overflow-hidden sidebar-archive-list" style={{ borderTop: "1px solid var(--border-muted)", paddingTop: "16px", minHeight: 0 }}>
           <div className="text-[10px] font-mono font-semibold uppercase text-zinc-500 tracking-wider mb-1 px-2 flex items-center justify-between">
             <span>Saved History</span>
             {archive.length > 0 && <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-bold">{archive.length}</span>}
@@ -186,7 +186,7 @@ export default function Sidebar({
               {archive.length === 0 ? "No publications saved yet." : "No matching records found."}
             </div>
           ) : (
-            <div className="flex flex-col overflow-y-auto pr-1 flex-1">
+            <div className="flex flex-col overflow-y-auto pr-1 flex-1" style={{ minHeight: 0 }}>
               {filteredArchive.map((item, idx) => (
                 <div
                   key={item.id}

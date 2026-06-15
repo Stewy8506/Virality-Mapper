@@ -491,27 +491,25 @@ export default function PostGeneratorForm({
               </p>
             </div>
 
-            {/* Split layout: Vertical timeline on the left rail, debate content on the right */}
-            <div className="flex flex-col md:flex-row gap-8 items-start">
-              {/* Left Column: Vertical Timeline */}
-              <DebateTimeline activeStep={activeStep} />
+            {/* Horizontal progress timeline at the top */}
+            <DebateTimeline activeStep={activeStep} />
 
-              {/* Right Column: Main Debate Content */}
-              <HUDLogConsole
-                statusMessage={statusMessage}
-                elapsedTime={elapsedTime}
-                formatTime={formatTime}
-                activityLogs={activityLogs}
-                activityContainerRef={activityContainerRef}
-                trends={trends}
-                activeStep={activeStep}
-                typedDrafts={typedDrafts}
-                typedRefinements={typedRefinements}
-                typedSettledContent={typedSettledContent}
-                error={error}
-                critiques={critiques}
-              />
-            </div>
+            {/* Main Debate Content */}
+            <HUDLogConsole
+              statusMessage={statusMessage}
+              elapsedTime={elapsedTime}
+              formatTime={formatTime}
+              activityLogs={activityLogs}
+              activityContainerRef={activityContainerRef}
+              trends={trends}
+              activeStep={activeStep}
+              typedDrafts={typedDrafts}
+              typedRefinements={typedRefinements}
+              typedSettledContent={typedSettledContent}
+              error={error}
+              critiques={critiques}
+              enabledAgents={agents.filter((a) => a.enabled)}
+            />
           </motion.div>
         )}
       </AnimatePresence>

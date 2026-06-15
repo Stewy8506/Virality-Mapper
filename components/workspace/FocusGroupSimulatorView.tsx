@@ -35,11 +35,11 @@ export default function FocusGroupSimulatorView({ personas }: FocusGroupSimulato
   return (
     <div className="flex flex-col gap-6" style={{ marginTop: "24px" }}>
       <div className="flex items-center gap-2 mb-2" style={{ borderBottom: "1px solid var(--border-muted)", paddingBottom: "14px" }}>
-        <Cpu size={18} className="text-zinc-400" />
-        <h3 style={{ fontSize: "1.05rem", fontWeight: 600 }} className="text-white">AI Target Audience Focus Group (A/B Test Simulation)</h3>
+        <Cpu size={18} className="text-zinc-200" />
+        <h3 style={{ fontSize: "1.5rem", fontWeight: 400 }} className="text-white">AI Target Audience Focus Group (A/B Test Simulation)</h3>
       </div>
 
-      <div className="focus-group-list">
+      <div className="focus-group-list max-w-4xl mx-auto w-full">
         {personas.map((persona, idx) => {
           const avgScore = Math.round((persona.scrollStopping + persona.engagement + persona.virality) / 3);
           return (

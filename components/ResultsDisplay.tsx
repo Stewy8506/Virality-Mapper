@@ -105,21 +105,63 @@ export default function ResultsDisplay({
   if (!result || !result.best) return null;
 
   return (
-    <div className="max-w-4xl mx-auto flex flex-col gap-8 anim-fade-up" style={{ marginTop: "40px", paddingBottom: "40px" }}>
-      
+    <div className="w-full mx-auto flex flex-col gap-8 anim-fade-up" style={{ marginTop: "40px", paddingBottom: "40px" }}>
+
       {/* Title */}
-      <div className="flex justify-center items-center gap-2.5 mb-2">
-        <div className="flow-step-icon active" style={{ width: "32px", height: "32px" }}>
-          <Zap size={14} />
+      <div className="max-w-4xl mx-auto w-full flex flex-col items-center">
+        <div className="flex justify-center items-center gap-2.5 mb-2">
+          <div className="flow-step-icon active" style={{ width: "32px", height: "32px" }}>
+            <Zap size={14} />
+          </div>
+          <h2 style={{ fontSize: "1.5rem", fontWeight: 400 }} className="text-white">
+            Settle Panel Outputs
+          </h2>
         </div>
-        <h2 style={{ fontSize: "1.3rem", fontWeight: 600 }} className="text-white">
-          Settle Panel Outputs
-        </h2>
+      </div>
+
+
+      {/* Synthesis Section */}
+      <div className="max-w-6xl mx-auto w-full">
+        <SynthesisOutputView
+          best={result.best}
+          preferences={preferences}
+          customMetrics={customMetrics}
+          copiedId={copiedId}
+          copyToClipboard={copyToClipboard}
+        />
+      </div>
+
+      {/* AI Persona A/B Focus Group Simulator */}
+      {result.best.personas && result.best.personas.length > 0 && (
+        <div className="max-w-6xl mx-auto w-full">
+          <FocusGroupSimulatorView personas={result.best.personas} />
+        </div>
+      )}
+
+      {/* Divider */}
+      <div className="max-w-6xl mx-auto w-full flex items-center gap-4 my-8">
+        <div style={{ flex: 1, height: "1px", background: "var(--border-muted)" }}></div>
+        <div className="flex items-center gap-2 text-zinc-400 font-semibold uppercase text-m font-mono tracking-wider">
+          <Cpu size={12} />
+          <span>Debate Arena logs</span>
+        </div>
+        <div style={{ flex: 1, height: "1px", background: "var(--border-muted)" }}></div>
+      </div>
+
+      {/* Critique Arena Section */}
+      <div className="max-w-6xl mx-auto w-full">
+        <CritiqueArenaView
+          initialDrafts={result.initialDrafts}
+          critiques={result.critiques}
+          refinedDrafts={result.refinedDrafts}
+          copiedId={copiedId}
+          copyToClipboard={copyToClipboard}
+        />
       </div>
 
       {/* Live Trends Box */}
       {result.trends && result.trends.length > 0 && (
-        <div style={{ borderTop: "1px dashed var(--border-muted)", paddingTop: "24px" }}>
+        <div className="max-w-4xl mx-auto w-full" style={{ borderTop: "1px dashed var(--border-muted)", paddingTop: "24px", marginTop: "24px" }}>
           <div className="flex items-center gap-2 mb-3">
             <TrendingUp size={16} className="text-zinc-400" />
             <span style={{ fontSize: "0.85rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--foreground)", fontFamily: "var(--font-mono)" }}>
@@ -135,39 +177,6 @@ export default function ResultsDisplay({
           </ul>
         </div>
       )}
-
-      {/* Synthesis Section */}
-      <SynthesisOutputView
-        best={result.best}
-        preferences={preferences}
-        customMetrics={customMetrics}
-        copiedId={copiedId}
-        copyToClipboard={copyToClipboard}
-      />
-
-      {/* AI Persona A/B Focus Group Simulator */}
-      {result.best.personas && result.best.personas.length > 0 && (
-        <FocusGroupSimulatorView personas={result.best.personas} />
-      )}
-
-      {/* Divider */}
-      <div className="flex items-center gap-4 my-8" style={{ width: "100%" }}>
-        <div style={{ flex: 1, height: "1px", background: "var(--border-muted)" }}></div>
-        <div className="flex items-center gap-2 text-zinc-500 font-semibold uppercase text-xs font-mono tracking-wider">
-          <Cpu size={12} />
-          <span>Debate Arena logs</span>
-        </div>
-        <div style={{ flex: 1, height: "1px", background: "var(--border-muted)" }}></div>
-      </div>
-
-      {/* Critique Arena Section */}
-      <CritiqueArenaView
-        initialDrafts={result.initialDrafts}
-        critiques={result.critiques}
-        refinedDrafts={result.refinedDrafts}
-        copiedId={copiedId}
-        copyToClipboard={copyToClipboard}
-      />
 
     </div>
   );

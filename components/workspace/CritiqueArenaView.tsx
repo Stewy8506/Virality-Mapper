@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Copy, CheckCircle2 } from "lucide-react";
 
 interface Draft {
   name: string;
@@ -47,7 +48,7 @@ export default function CritiqueArenaView({
   return (
     <>
       {/* Sub-tab Navigation (Typographic Menu list) */}
-      <div className="minimal-tabs-header">
+      <div className="minimal-tabs-header max-w-4xl mx-auto w-full">
         <button
           onClick={() => setArenaTab("drafts")}
           className={`minimal-tab ${arenaTab === "drafts" ? "active" : ""}`}
@@ -86,7 +87,7 @@ export default function CritiqueArenaView({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className="focus-group-list"
+            className="focus-group-list max-w-4xl mx-auto w-full"
           >
             {initialDrafts.map((draft, idx) => (
               <div key={idx} className="focus-group-row">
@@ -124,10 +125,11 @@ export default function CritiqueArenaView({
 
                   <div className="flex justify-end mt-2">
                     <button
-                      className="text-[11px] font-mono font-bold uppercase text-zinc-400 hover:text-white cursor-pointer bg-transparent border-0"
+                      className="action-pill-btn"
                       onClick={() => copyToClipboard(`draft-${idx}`, draft.content)}
                     >
-                      {copiedId === `draft-${idx}` ? "[Copied!]" : "[Copy Draft]"}
+                      {copiedId === `draft-${idx}` ? <CheckCircle2 size={12} /> : <Copy size={12} />}
+                      <span>{copiedId === `draft-${idx}` ? "COPIED" : "COPY DRAFT"}</span>
                     </button>
                   </div>
                 </div>
@@ -143,7 +145,7 @@ export default function CritiqueArenaView({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className="focus-group-list"
+            className="focus-group-list max-w-4xl mx-auto w-full"
           >
             {critiques.map((crit, idx) => (
               <div key={idx} className="focus-group-row">
@@ -173,7 +175,7 @@ export default function CritiqueArenaView({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className="focus-group-list"
+            className="focus-group-list max-w-4xl mx-auto w-full"
           >
             {refinedDrafts.map((refined, idx) => (
               <div key={idx} className="focus-group-row">
@@ -211,10 +213,11 @@ export default function CritiqueArenaView({
 
                   <div className="flex justify-end mt-2">
                     <button
-                      className="text-[11px] font-mono font-bold uppercase text-zinc-400 hover:text-white cursor-pointer bg-transparent border-0"
+                      className="action-pill-btn"
                       onClick={() => copyToClipboard(`refined-${idx}`, refined.content)}
                     >
-                      {copiedId === `refined-${idx}` ? "[Copied!]" : "[Copy Refined]"}
+                      {copiedId === `refined-${idx}` ? <CheckCircle2 size={12} /> : <Copy size={12} />}
+                      <span>{copiedId === `refined-${idx}` ? "COPIED" : "COPY REFINED"}</span>
                     </button>
                   </div>
                 </div>

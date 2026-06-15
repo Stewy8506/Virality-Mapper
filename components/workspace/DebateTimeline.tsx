@@ -8,9 +8,9 @@ interface DebateTimelineProps {
 
 export default function DebateTimeline({ activeStep }: DebateTimelineProps) {
   return (
-    <div className="w-full md:w-[150px] flex-shrink-0">
-      <div className="vertical-timeline">
-        <div className="vertical-timeline-line" />
+    <div className="w-full mb-6">
+      <div className="horizontal-timeline">
+        <div className="horizontal-timeline-line" />
 
         <div className={`timeline-node ${activeStep === 0 ? "active" : activeStep > 0 ? "success" : ""}`}>
           <div className="timeline-node-dot" />

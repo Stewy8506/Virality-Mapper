@@ -1,7 +1,7 @@
 "use client";
 
-import { Sparkles, TrendingUp } from "lucide-react";
-import React from "react";
+import { Sparkles, TrendingUp, Layers, MessageSquare, Target, Info, Eye, Heart } from "lucide-react";
+import React, { useState } from "react";
 
 interface GenerationResult {
   trends: string[];
@@ -91,12 +91,16 @@ export default function PerformanceAnalytics({
   setResult,
   setActiveTab,
 }: PerformanceAnalyticsProps) {
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const descriptionText = selectedItem.description || "";
+  const isLongDescription = descriptionText.length > 220;
+
   return (
-    <div className="flex flex-col gap-4" style={{ borderTop: "1px solid var(--border-muted)", paddingTop: "24px" }}>
-      <div className="flex items-center justify-between" style={{ borderBottom: "1px solid var(--border-muted)", paddingBottom: "12px" }}>
-        <div className="flex items-center gap-2">
-          <Sparkles size={15} className="text-zinc-400" />
-          <span style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--zinc-400)" }}>Original Prompt Context</span>
+    <div className="analytics-outer-panel font-sans">
+      <div className="analytics-header">
+        <div className="analytics-title">
+          <Sparkles size={16} className="text-zinc-400" />
+          <span>Original Prompt Context</span>
         </div>
         <button
           onClick={() => {
@@ -117,65 +121,120 @@ export default function PerformanceAnalytics({
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 text-xs">
-        <div><strong className="text-zinc-500 uppercase tracking-wider text-[10px] block mb-1">AppName</strong> <span className="text-zinc-200 font-medium">{selectedItem.appName}</span></div>
-        <div><strong className="text-zinc-500 uppercase tracking-wider text-[10px] block mb-1">Tone</strong> <span className="text-zinc-200 font-medium">{selectedItem.tone || "General"}</span></div>
-        <div style={{ gridColumn: "span 2" }}><strong className="text-zinc-500 uppercase tracking-wider text-[10px] block mb-1">Description</strong> <span className="text-zinc-300 leading-relaxed">{selectedItem.description}</span></div>
-        <div style={{ gridColumn: "span 2" }}><strong className="text-zinc-500 uppercase tracking-wider text-[10px] block mb-1">Target Audience</strong> <span className="text-zinc-300 leading-relaxed">{selectedItem.targetAudience || "General Professionals"}</span></div>
+      <div className="metadata-grid">
+        <div className="metadata-tile">
+          <span className="metadata-label">
+            <Layers size={12} className="text-zinc-500" />
+            AppName
+          </span>
+          <span className="metadata-value">{selectedItem.appName}</span>
+        </div>
+
+        <div className="metadata-tile">
+          <span className="metadata-label">
+            <MessageSquare size={12} className="text-zinc-500" />
+            Tone
+          </span>
+          <span className="metadata-value">{selectedItem.tone || "General"}</span>
+        </div>
+
+        <div className="metadata-tile">
+          <span className="metadata-label">
+            <Target size={12} className="text-zinc-500" />
+            Target Audience
+          </span>
+          <span className="metadata-value">{selectedItem.targetAudience || "General Professionals"}</span>
+        </div>
+
+        <div className="description-callout">
+          <span className="metadata-label">
+            <Info size={12} className="text-zinc-500" />
+            Prompt Description
+          </span>
+          <div className="description-text">
+            {isLongDescription && !isDescriptionExpanded ? (
+              <>
+                {descriptionText.slice(0, 220)}...{" "}
+                <button
+                  onClick={() => setIsDescriptionExpanded(true)}
+                  className="action-pill-btn ml-2"
+                  style={{ padding: "2px 8px", fontSize: "0.65rem" }}
+                >
+                  Expand
+                </button>
+              </>
+            ) : (
+              <>
+                {descriptionText}{" "}
+                {isLongDescription && (
+                  <button
+                    onClick={() => setIsDescriptionExpanded(false)}
+                    className="action-pill-btn ml-2"
+                    style={{ padding: "2px 8px", fontSize: "0.65rem" }}
+                  >
+                    Collapse
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Performance metrics dashboard inline */}
-      <div style={{ borderTop: "1px dashed var(--border-muted)", paddingTop: "16px", marginTop: "8px" }}>
-        <div className="flex justify-between items-center mb-3">
-          <div className="flex items-center gap-1.5 text-zinc-400 font-semibold uppercase text-[10px] tracking-wider font-mono">
-            <TrendingUp size={13} className="text-zinc-400 animate-pulse" />
+      <div className="feedback-loop-section">
+        <div className="feedback-loop-header">
+          <div className="feedback-loop-title">
+            <TrendingUp size={14} className="text-zinc-400 animate-pulse" />
             <span>Self-Published Analytics (Feedback Loop)</span>
           </div>
-          {!selectedItem.performance && editingPerformanceId !== selectedItem.id && (
+          {selectedItem.performance && editingPerformanceId !== selectedItem.id && (
             <button
               onClick={() => {
                 setEditingPerformanceId(selectedItem.id);
-                setImpressions(0);
-                setLikes(0);
-                setComments(0);
+                setImpressions(selectedItem.performance!.impressions);
+                setLikes(selectedItem.performance!.likes);
+                setComments(selectedItem.performance!.comments);
               }}
-              className="text-[10px] text-zinc-400 font-semibold cursor-pointer hover:underline border-0 bg-transparent"
+              className="action-pill-btn"
             >
-              + Record Actual Metrics
+              Edit Metrics
             </button>
           )}
         </div>
 
         {editingPerformanceId === selectedItem.id ? (
-          <div className="flex flex-wrap gap-4 items-end p-4 rounded-xl border border-zinc-800/40" style={{ background: "rgba(0,0,0,0.15)", borderColor: "var(--border-muted)" }}>
-            <div className="flex flex-col gap-1 text-[10px] font-mono text-zinc-400">
-              <span>Impressions</span>
-              <input
-                type="number"
-                className="form-input text-xs w-28 h-8 p-1.5"
-                value={impressions}
-                onChange={(e) => setImpressions(Number(e.target.value))}
-              />
+          <div className="flex flex-col gap-4 p-5 rounded-xl border border-zinc-800/60" style={{ background: "var(--background)", borderColor: "var(--border-muted)" }}>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[10px] font-bold font-mono text-zinc-500 uppercase tracking-wider">Impressions</span>
+                <input
+                  type="number"
+                  className="form-input text-xs h-9 px-3"
+                  value={impressions}
+                  onChange={(e) => setImpressions(Number(e.target.value))}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[10px] font-bold font-mono text-zinc-500 uppercase tracking-wider">Likes</span>
+                <input
+                  type="number"
+                  className="form-input text-xs h-9 px-3"
+                  value={likes}
+                  onChange={(e) => setLikes(Number(e.target.value))}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[10px] font-bold font-mono text-zinc-500 uppercase tracking-wider">Comments</span>
+                <input
+                  type="number"
+                  className="form-input text-xs h-9 px-3"
+                  value={comments}
+                  onChange={(e) => setComments(Number(e.target.value))}
+                />
+              </div>
             </div>
-            <div className="flex flex-col gap-1 text-[10px] font-mono text-zinc-400">
-              <span>Likes</span>
-              <input
-                type="number"
-                className="form-input text-xs w-28 h-8 p-1.5"
-                value={likes}
-                onChange={(e) => setLikes(Number(e.target.value))}
-              />
-            </div>
-            <div className="flex flex-col gap-1 text-[10px] font-mono text-zinc-400">
-              <span>Comments</span>
-              <input
-                type="number"
-                className="form-input text-xs w-28 h-8 p-1.5"
-                value={comments}
-                onChange={(e) => setComments(Number(e.target.value))}
-              />
-            </div>
-            <div className="flex gap-2">
+
+            <div className="flex justify-end gap-2 mt-2">
               <button
                 onClick={() => {
                   handleSavePerformance(selectedItem.id, { impressions, likes, comments });
@@ -194,44 +253,68 @@ export default function PerformanceAnalytics({
             </div>
           </div>
         ) : selectedItem.performance ? (
-          <div className="flex items-center gap-4 justify-between bg-zinc-900/10 border border-zinc-800/20 p-3 rounded-xl text-xs font-mono text-zinc-300">
-            <div className="flex gap-6">
-              <div><span className="text-zinc-500 font-semibold uppercase text-[9px] mr-1">Impressions:</span> {selectedItem.performance!.impressions.toLocaleString()}</div>
-              <div><span className="text-zinc-500 font-semibold uppercase text-[9px] mr-1">Likes:</span> {selectedItem.performance!.likes.toLocaleString()}</div>
-              <div><span className="text-zinc-500 font-semibold uppercase text-[9px] mr-1">Comments:</span> {selectedItem.performance!.comments.toLocaleString()}</div>
+          <div>
+            <div className="kpi-stats-grid">
+              <div className="kpi-stat-card">
+                <span className="kpi-stat-number">{selectedItem.performance.impressions.toLocaleString()}</span>
+                <span className="kpi-stat-label">
+                  <Eye size={12} className="text-zinc-500" />
+                  Impressions
+                </span>
+              </div>
+              <div className="kpi-stat-card">
+                <span className="kpi-stat-number">{selectedItem.performance.likes.toLocaleString()}</span>
+                <span className="kpi-stat-label">
+                  <Heart size={12} className="text-zinc-500" />
+                  Likes
+                </span>
+              </div>
+              <div className="kpi-stat-card">
+                <span className="kpi-stat-number">{selectedItem.performance.comments.toLocaleString()}</span>
+                <span className="kpi-stat-label">
+                  <MessageSquare size={12} className="text-zinc-500" />
+                  Comments
+                </span>
+              </div>
             </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setEditingPerformanceId(selectedItem.id);
-                  setImpressions(selectedItem.performance!.impressions);
-                  setLikes(selectedItem.performance!.likes);
-                  setComments(selectedItem.performance!.comments);
-                }}
-                className="text-[10px] text-zinc-500 hover:text-white cursor-pointer border-0 bg-transparent"
-              >
-                [Edit]
-              </button>
+
+            <div className="kpi-actions-container">
               <button
                 onClick={() => handleDeleteArchive(selectedItem.id)}
-                className="text-[10px] text-rose-400 hover:text-rose-300 cursor-pointer border-0 bg-transparent font-bold"
+                className="action-pill-btn action-pill-btn-danger"
               >
-                [Delete]
+                Delete Publication
               </button>
             </div>
           </div>
         ) : (
-          <div className="flex items-center justify-between text-[10px] text-zinc-500 font-mono italic">
-            <span>No performance metrics recorded for this publication yet. Record them once published to feed the self-improving RAG database.</span>
-            <button
-              onClick={() => handleDeleteArchive(selectedItem.id)}
-              className="text-[10px] text-rose-400 hover:text-rose-300 cursor-pointer border-0 bg-transparent font-bold ml-2"
-            >
-              [Delete Publication]
-            </button>
+          <div className="analytics-empty-state">
+            <span className="analytics-empty-text font-mono italic">
+              No performance metrics recorded for this publication yet. Record them once published to feed the self-improving RAG database.
+            </span>
+            <div className="analytics-empty-actions">
+              <button
+                onClick={() => {
+                  setEditingPerformanceId(selectedItem.id);
+                  setImpressions(0);
+                  setLikes(0);
+                  setComments(0);
+                }}
+                className="action-pill-btn"
+              >
+                + Record Actual Metrics
+              </button>
+              <button
+                onClick={() => handleDeleteArchive(selectedItem.id)}
+                className="action-pill-btn action-pill-btn-danger"
+              >
+                Delete Publication
+              </button>
+            </div>
           </div>
         )}
       </div>
     </div>
   );
 }
+

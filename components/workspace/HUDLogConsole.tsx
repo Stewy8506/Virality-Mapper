@@ -1,8 +1,9 @@
 "use client";
 
-import { ShieldAlert, Award, TrendingUp, Clock } from "lucide-react";
+import { ShieldAlert, Award, TrendingUp, Clock, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import React from "react";
+import type { Agent } from "@/types/domain";
 
 interface ActivityLog {
   id: string;
@@ -18,7 +19,6 @@ interface Critique {
   score: number;
 }
 
-
 interface HUDLogConsoleProps {
   statusMessage: string;
   elapsedTime: number;
@@ -32,6 +32,7 @@ interface HUDLogConsoleProps {
   typedSettledContent: string;
   error: string;
   critiques: Critique[];
+  enabledAgents: Agent[];
 }
 
 export default function HUDLogConsole({
@@ -47,6 +48,7 @@ export default function HUDLogConsole({
   typedSettledContent,
   error,
   critiques,
+  enabledAgents,
 }: HUDLogConsoleProps) {
   return (
     <div className="flex-1 flex flex-col gap-6 w-full">
@@ -78,26 +80,37 @@ export default function HUDLogConsole({
       )}
 
       {/* Step 2: Live Typewriting Initial Drafts */}
-      {Object.keys(typedDrafts).length > 0 && (
+      {activeStep >= 1 && (
         <div className="flex flex-col gap-4">
           <div className="text-[10px] font-mono font-semibold uppercase text-zinc-500 tracking-wider">
             Phase 01 // Parallel Generator Proposal Drafts
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {Object.entries(typedDrafts).map(([name, text]) => (
-              <div key={name} className="flex flex-col p-4 border border-zinc-800 bg-zinc-950/10" style={{ minHeight: "200px" }}>
-                <span className="text-[11px] font-bold text-white mb-2 uppercase font-mono">{name}</span>
-                <p style={{ fontSize: "0.82rem", lineHeight: 1.6, whiteSpace: "pre-wrap", color: "var(--zinc-300)", margin: 0 }} className="font-mono">
-                  {text || "Generating proposal..."}
-                </p>
-              </div>
-            ))}
+            {enabledAgents.map((agent) => {
+              const draftText = typedDrafts[agent.name];
+              const isLoaded = !!draftText;
+              return (
+                <div key={agent.id} className={`flex flex-col p-4 border border-zinc-800 bg-zinc-950/10 ${!isLoaded ? "animate-pulse" : ""}`} style={{ minHeight: "200px" }}>
+                  <span className="text-[11px] font-bold text-white mb-2 uppercase font-mono">{agent.name}</span>
+                  {isLoaded ? (
+                    <p style={{ fontSize: "0.82rem", lineHeight: 1.6, whiteSpace: "pre-wrap", color: "var(--zinc-300)", margin: 0 }} className="font-mono">
+                      {draftText}
+                    </p>
+                  ) : (
+                    <div className="flex-1 flex flex-col gap-2 justify-center items-center text-zinc-500">
+                      <Loader2 className="animate-spin text-rose-500/80 mb-2" size={16} />
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">Agent is drafting...</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
       {/* Step 3: Critiques Logs */}
-      {critiques.length > 0 && (
+      {activeStep >= 2 && (
         <div className="flex flex-col gap-4">
           <div className="text-[10px] font-mono font-semibold uppercase text-zinc-500 tracking-wider">
             Phase 02 // Bidirectional Peer Review Critique Panel
@@ -114,25 +127,42 @@ export default function HUDLogConsole({
                 </p>
               </div>
             ))}
+            {critiques.length < 6 && (
+              <div className="flex items-center gap-2 p-3 border border-dashed border-zinc-800/80 bg-zinc-950/5 text-[10px] font-mono text-zinc-500 animate-pulse">
+                <Loader2 className="animate-spin text-rose-500/60" size={12} />
+                <span>BI-DIRECTIONAL REVIEW IN PROGRESS ({critiques.length}/6 COMMITTED)...</span>
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {/* Step 4: Refined Drafts */}
-      {Object.keys(typedRefinements).length > 0 && (
+      {activeStep >= 3 && (
         <div className="flex flex-col gap-4">
           <div className="text-[10px] font-mono font-semibold uppercase text-zinc-500 tracking-wider">
             Phase 03 // Recursive Refinement Outputs
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {Object.entries(typedRefinements).map(([name, text]) => (
-              <div key={name} className="flex flex-col p-4 border border-zinc-800 bg-zinc-950/10" style={{ minHeight: "200px" }}>
-                <span className="text-[11px] font-bold text-white mb-2 uppercase font-mono">{name}</span>
-                <p style={{ fontSize: "0.82rem", lineHeight: 1.6, whiteSpace: "pre-wrap", color: "var(--zinc-300)", margin: 0 }} className="font-mono">
-                  {text || "Refining draft..."}
-                </p>
-              </div>
-            ))}
+            {enabledAgents.map((agent) => {
+              const refinedText = typedRefinements[agent.name];
+              const isLoaded = !!refinedText;
+              return (
+                <div key={agent.id} className={`flex flex-col p-4 border border-zinc-800 bg-zinc-950/10 ${!isLoaded ? "animate-pulse" : ""}`} style={{ minHeight: "200px" }}>
+                  <span className="text-[11px] font-bold text-white mb-2 uppercase font-mono">{agent.name}</span>
+                  {isLoaded ? (
+                    <p style={{ fontSize: "0.82rem", lineHeight: 1.6, whiteSpace: "pre-wrap", color: "var(--zinc-300)", margin: 0 }} className="font-mono">
+                      {refinedText}
+                    </p>
+                  ) : (
+                    <div className="flex-1 flex flex-col gap-2 justify-center items-center text-zinc-500">
+                      <Loader2 className="animate-spin text-rose-500/80 mb-2" size={16} />
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">Refinement in progress...</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

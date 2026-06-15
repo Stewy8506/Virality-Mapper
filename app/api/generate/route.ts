@@ -304,17 +304,23 @@ Example:
 }
 `;
 
-          let draftA, draftB, draftC;
+          let draftA: LLMAgentResult = {}, draftB: LLMAgentResult = {}, draftC: LLMAgentResult = {};
 
           try {
-            [draftA, draftB, draftC] = await Promise.all([
-              runAgentCall(agentA, "You are drafting an initial viral LinkedIn post.", draftUserPrompt, "Drafting"),
-              runAgentCall(agentB, "You are drafting an initial viral LinkedIn post.", draftUserPrompt, "Drafting"),
-              runAgentCall(agentC, "You are drafting an initial viral LinkedIn post.", draftUserPrompt, "Drafting"),
+            await Promise.all([
+              (async () => {
+                draftA = await runAgentCall(agentA, "You are drafting an initial viral LinkedIn post.", draftUserPrompt, "Drafting");
+                sendEvent("draft-complete", { name: agentA.name, content: draftA.content, hookExplanation: draftA.hookExplanation, provider: agentA.provider, model: agentA.model });
+              })(),
+              (async () => {
+                draftB = await runAgentCall(agentB, "You are drafting an initial viral LinkedIn post.", draftUserPrompt, "Drafting");
+                sendEvent("draft-complete", { name: agentB.name, content: draftB.content, hookExplanation: draftB.hookExplanation, provider: agentB.provider, model: agentB.model });
+              })(),
+              (async () => {
+                draftC = await runAgentCall(agentC, "You are drafting an initial viral LinkedIn post.", draftUserPrompt, "Drafting");
+                sendEvent("draft-complete", { name: agentC.name, content: draftC.content, hookExplanation: draftC.hookExplanation, provider: agentC.provider, model: agentC.model });
+              })(),
             ]);
-            for (const [agent, draft] of [[agentA, draftA], [agentB, draftB], [agentC, draftC]] as const) {
-              sendEvent("draft-complete", { name: agent.name, content: draft.content, hookExplanation: draft.hookExplanation, provider: agent.provider, model: agent.model });
-            }
           } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
             throw new Error(`Draft phase failed: ${msg}`);
@@ -323,28 +329,35 @@ Example:
           // Step 3: Phase 2 (Critique Arena)
           sendEvent("status", { message: "[Phase 2] Debate Arena: bidirectional peer review critique round..." });
 
-          let critiqueAtoB, critiqueBtoA, critiqueBtoC, critiqueCtoB, critiqueAtoC, critiqueCtoA;
+          let critiqueAtoB: LLMAgentResult = {}, critiqueBtoA: LLMAgentResult = {}, critiqueBtoC: LLMAgentResult = {}, critiqueCtoB: LLMAgentResult = {}, critiqueAtoC: LLMAgentResult = {}, critiqueCtoA: LLMAgentResult = {};
 
           try {
-            [critiqueAtoB, critiqueBtoA, critiqueBtoC, critiqueCtoB, critiqueAtoC, critiqueCtoA] = await Promise.all([
-              runAgentCall(agentA, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Beta:\n"${draftB.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Beta"),
-              runAgentCall(agentB, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Alpha:\n"${draftA.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Alpha"),
-              runAgentCall(agentB, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Gamma:\n"${draftC.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Gamma"),
-              runAgentCall(agentC, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Beta:\n"${draftB.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Beta"),
-              runAgentCall(agentA, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Gamma:\n"${draftC.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Gamma"),
-              runAgentCall(agentC, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Alpha:\n"${draftA.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Alpha"),
+            await Promise.all([
+              (async () => {
+                critiqueAtoB = await runAgentCall(agentA, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Beta:\n"${draftB.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Beta");
+                sendEvent("critique-complete", { from: agentA.name, to: agentB.name, content: critiqueAtoB.critique, score: critiqueAtoB.score });
+              })(),
+              (async () => {
+                critiqueBtoA = await runAgentCall(agentB, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Alpha:\n"${draftA.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Alpha");
+                sendEvent("critique-complete", { from: agentB.name, to: agentA.name, content: critiqueBtoA.critique, score: critiqueBtoA.score });
+              })(),
+              (async () => {
+                critiqueBtoC = await runAgentCall(agentB, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Gamma:\n"${draftC.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Gamma");
+                sendEvent("critique-complete", { from: agentB.name, to: agentC.name, content: critiqueBtoC.critique, score: critiqueBtoC.score });
+              })(),
+              (async () => {
+                critiqueCtoB = await runAgentCall(agentC, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Beta:\n"${draftB.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Beta");
+                sendEvent("critique-complete", { from: agentC.name, to: agentB.name, content: critiqueCtoB.critique, score: critiqueCtoB.score });
+              })(),
+              (async () => {
+                critiqueAtoC = await runAgentCall(agentA, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Gamma:\n"${draftC.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Gamma");
+                sendEvent("critique-complete", { from: agentA.name, to: agentC.name, content: critiqueAtoC.critique, score: critiqueAtoC.score });
+              })(),
+              (async () => {
+                critiqueCtoA = await runAgentCall(agentC, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Alpha:\n"${draftA.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Alpha");
+                sendEvent("critique-complete", { from: agentC.name, to: agentA.name, content: critiqueCtoA.critique, score: critiqueCtoA.score });
+              })(),
             ]);
-            const critiqueEvents = [
-              { from: agentA.name, to: agentB.name, result: critiqueAtoB },
-              { from: agentB.name, to: agentA.name, result: critiqueBtoA },
-              { from: agentB.name, to: agentC.name, result: critiqueBtoC },
-              { from: agentC.name, to: agentB.name, result: critiqueCtoB },
-              { from: agentA.name, to: agentC.name, result: critiqueAtoC },
-              { from: agentC.name, to: agentA.name, result: critiqueCtoA },
-            ];
-            for (const evt of critiqueEvents) {
-              sendEvent("critique-complete", { from: evt.from, to: evt.to, content: evt.result.critique, score: evt.result.score });
-            }
           } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
             throw new Error(`Critique phase failed: ${msg}`);
@@ -428,17 +441,23 @@ Example:
 }
 `;
 
-          let refinedA, refinedB, refinedC;
+          let refinedA: LLMAgentResult = {}, refinedB: LLMAgentResult = {}, refinedC: LLMAgentResult = {};
 
           try {
-            [refinedA, refinedB, refinedC] = await Promise.all([
-              runAgentCall(agentA, "You are refining your original LinkedIn post based on peer critique.", refinePromptA, "Refinement"),
-              runAgentCall(agentB, "You are refining your original LinkedIn post based on peer critique.", refinePromptB, "Refinement"),
-              runAgentCall(agentC, "You are refining your original LinkedIn post based on peer critique.", refinePromptC, "Refinement"),
+            await Promise.all([
+              (async () => {
+                refinedA = await runAgentCall(agentA, "You are refining your original LinkedIn post based on peer critique.", refinePromptA, "Refinement");
+                sendEvent("refine-complete", { name: agentA.name, content: refinedA.content, score: refinedA.score, argument: refinedA.argument, provider: agentA.provider, model: agentA.model });
+              })(),
+              (async () => {
+                refinedB = await runAgentCall(agentB, "You are refining your original LinkedIn post based on peer critique.", refinePromptB, "Refinement");
+                sendEvent("refine-complete", { name: agentB.name, content: refinedB.content, score: refinedB.score, argument: refinedB.argument, provider: agentB.provider, model: agentB.model });
+              })(),
+              (async () => {
+                refinedC = await runAgentCall(agentC, "You are refining your original LinkedIn post based on peer critique.", refinePromptC, "Refinement");
+                sendEvent("refine-complete", { name: agentC.name, content: refinedC.content, score: refinedC.score, argument: refinedC.argument, provider: agentC.provider, model: agentC.model });
+              })(),
             ]);
-            for (const [agent, refined] of [[agentA, refinedA], [agentB, refinedB], [agentC, refinedC]] as const) {
-              sendEvent("refine-complete", { name: agent.name, content: refined.content, score: refined.score, argument: refined.argument, provider: agent.provider, model: agent.model });
-            }
           } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
             throw new Error(`Refinement phase failed: ${msg}`);
