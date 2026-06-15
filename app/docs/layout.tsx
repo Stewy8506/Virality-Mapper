@@ -312,10 +312,14 @@ export default function DocsLayout({
                     style={{ paddingLeft: heading.level === 3 ? "12px" : "0px" }}
                   >
                     <a href={`#${heading.id}`} className="docs-toc-link">
-                      {heading.level === 3 && !heading.text.trim().startsWith("#") && (
+                      {heading.level === 3 && (
                         <Hash size={10} className="text-zinc-600 inline mr-1" />
                       )}
-                      <span>{heading.text}</span>
+                      <span>
+                        {heading.level === 3 && heading.text.trim().startsWith("#")
+                          ? heading.text.trim().replace(/^#\s*/, "")
+                          : heading.text}
+                      </span>
                     </a>
                   </li>
                 ))}
