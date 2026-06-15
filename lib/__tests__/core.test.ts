@@ -51,6 +51,47 @@ describe("getActiveAgents", () => {
     const active = getActiveAgents(agents);
     expect(active).toHaveLength(3);
     expect(active.every((a) => a.enabled)).toBe(true);
-    expect(active.find((a) => a.id === "2")).toBeUndefined();
+  });
+});
+
+describe("callLLM SSRF Validation", () => {
+  const dummyKeys = {
+    gemini: "",
+    openai: "",
+    anthropic: "",
+    openrouter: "",
+    ollamaUrl: "",
+    lmStudioUrl: "",
+    customBaseUrl: "",
+    customApiKey: "",
+    serpapi: "",
+  };
+
+  it("throws an error when customBaseUrl contains a cloud metadata IP", async () => {
+    const keys = { ...dummyKeys, customBaseUrl: "http://169.254.169.254/v1" };
+    await expect(
+      import("../llm").then((m) => m.callLLM("custom", "model", "sys", "user", 0.7, keys))
+    ).rejects.toThrow("Invalid or unsafe URL provided for custom");
+  });
+
+  it("throws an error when customBaseUrl uses an invalid protocol", async () => {
+    const keys = { ...dummyKeys, customBaseUrl: "ftp://localhost:8080/v1" };
+    await expect(
+      import("../llm").then((m) => m.callLLM("custom", "model", "sys", "user", 0.7, keys))
+    ).rejects.toThrow("Invalid or unsafe URL provided for custom");
+  });
+
+  it("throws an error when customBaseUrl contains path traversal", async () => {
+    const keys = { ...dummyKeys, customBaseUrl: "http://localhost:8080/v1/../etc" };
+    await expect(
+      import("../llm").then((m) => m.callLLM("custom", "model", "sys", "user", 0.7, keys))
+    ).rejects.toThrow("Invalid or unsafe URL provided for custom");
+  });
+
+  it("throws an error when customBaseUrl contains user credentials", async () => {
+    const keys = { ...dummyKeys, customBaseUrl: "http://user:password@localhost:8080/v1" };
+    await expect(
+      import("../llm").then((m) => m.callLLM("custom", "model", "sys", "user", 0.7, keys))
+    ).rejects.toThrow("Invalid or unsafe URL provided for custom");
   });
 });

@@ -4,6 +4,46 @@ import Anthropic from "@anthropic-ai/sdk";
 import { robustJsonParse } from "@/lib/json";
 import type { AdvancedParams, ApiKeys } from "@/types/domain";
 
+function isValidBaseUrl(urlStr: string): boolean {
+  try {
+    const parsed = new URL(urlStr);
+    
+    // Allow only http and https protocols
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return false;
+    }
+    
+    // Prevent credentials/user info in URL
+    if (parsed.username || parsed.password) {
+      return false;
+    }
+    
+    // Block common cloud metadata services to prevent SSRF
+    const hostname = parsed.hostname.toLowerCase();
+    if (
+      hostname === "169.254.169.254" ||
+      hostname === "metadata.google.internal" ||
+      hostname === "instance-data"
+    ) {
+      return false;
+    }
+    
+    // Prevent path traversal attempts
+    if (
+      urlStr.includes("..") ||
+      urlStr.includes("%2e%2e") ||
+      urlStr.includes("%2E%2E")
+    ) {
+      return false;
+    }
+    
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+
 export const LLM_TIMEOUT_MS = 30000;
 
 type LLMResult = Record<string, unknown>;
@@ -136,7 +176,11 @@ export async function callLLM(
         custom: apiKeys.customApiKey || "custom",
       };
       if (provider === "custom" && !apiKeys.customBaseUrl) throw new Error("Custom OpenAI endpoint URL is missing.");
-      const openai = new OpenAI({ apiKey: apiKeyMap[provider], baseURL: baseURLs[provider] });
+      const targetBaseUrl = baseURLs[provider];
+      if (targetBaseUrl && !isValidBaseUrl(targetBaseUrl)) {
+        throw new Error(`Invalid or unsafe URL provided for ${provider}: ${targetBaseUrl}`);
+      }
+      const openai = new OpenAI({ apiKey: apiKeyMap[provider], baseURL: targetBaseUrl });
       const body = buildOpenAICompatibleBody(
         model || defaultModels[provider],
         systemPrompt,

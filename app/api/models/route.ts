@@ -4,6 +4,45 @@ import { decrypt } from "@/lib/crypto";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import type { ApiKeys } from "@/types/domain";
 
+function isValidBaseUrl(urlStr: string): boolean {
+  try {
+    const parsed = new URL(urlStr);
+    
+    // Allow only http and https protocols
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return false;
+    }
+    
+    // Prevent credentials/user info in URL
+    if (parsed.username || parsed.password) {
+      return false;
+    }
+    
+    // Block common cloud metadata services to prevent SSRF
+    const hostname = parsed.hostname.toLowerCase();
+    if (
+      hostname === "169.254.169.254" ||
+      hostname === "metadata.google.internal" ||
+      hostname === "instance-data"
+    ) {
+      return false;
+    }
+    
+    // Prevent path traversal attempts
+    if (
+      urlStr.includes("..") ||
+      urlStr.includes("%2e%2e") ||
+      urlStr.includes("%2E%2E")
+    ) {
+      return false;
+    }
+    
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const contentLength = req.headers.get("content-length");
@@ -23,6 +62,10 @@ export async function POST(req: Request) {
 
     if (!provider) {
       return NextResponse.json({ error: "Provider is required" }, { status: 400 });
+    }
+
+    if (customUrl && !isValidBaseUrl(customUrl)) {
+      return NextResponse.json({ error: "Invalid or unsafe custom URL provided" }, { status: 400 });
     }
 
     let apiKey = clientApiKey;

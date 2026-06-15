@@ -1,6 +1,6 @@
 "use client";
 
-import { Sparkles, TrendingUp, Layers, MessageSquare, Target, Info, Eye, Heart } from "lucide-react";
+import { Sparkles, TrendingUp, ArrowRight, Eye, Heart, MessageSquare } from "lucide-react";
 import React, { useState } from "react";
 
 interface GenerationResult {
@@ -95,13 +95,99 @@ export default function PerformanceAnalytics({
   const descriptionText = selectedItem.description || "";
   const isLongDescription = descriptionText.length > 220;
 
+  const getHookArchetypeLabel = (styleSlug: string) => {
+    switch (styleSlug) {
+      case "organic": return "Organic / Default";
+      case "contrarian": return "Contrarian Interrupt (Shock & Debunk)";
+      case "vulnerable": return "Vulnerable Disclosure (Failure & Trust)";
+      case "value-stash": return "High-Value Stash (Resources & Curation)";
+      case "threat-fear": return "Threat & Fear (Risks & Heuristics)";
+      default: return styleSlug || "Organic / Default";
+    }
+  };
+
   return (
     <div className="analytics-outer-panel font-sans">
       <div className="analytics-header">
         <div className="analytics-title">
-          <Sparkles size={16} className="text-zinc-400" />
-          <span>Original Prompt Context</span>
+          <span>//  Original Prompt Context</span>
         </div>
+      </div>
+
+      <div className="typographic-form" style={{ borderTop: "none", marginBottom: 0 }}>
+        {/* Row 1 */}
+        <div className="form-row">
+          <div className="row-num">01 /</div>
+          <div className="row-content">
+            <span className="row-label">We are building (App / Project Name)</span>
+            <div className="minimal-input">{selectedItem.appName}</div>
+          </div>
+        </div>
+
+        {/* Row 2 */}
+        <div className="form-row">
+          <div className="row-num">02 /</div>
+          <div className="row-content">
+            <span className="row-label">What does it do? (Features & Problems Solved)</span>
+            <div className="minimal-input" style={{ whiteSpace: "pre-wrap", minHeight: "auto", lineHeight: 1.5 }}>
+              {isLongDescription && !isDescriptionExpanded ? (
+                <>
+                  {descriptionText.slice(0, 220)}...{" "}
+                  <button
+                    onClick={() => setIsDescriptionExpanded(true)}
+                    className="action-pill-btn ml-2"
+                    style={{ padding: "2px 8px", fontSize: "0.65rem" }}
+                  >
+                    Expand
+                  </button>
+                </>
+              ) : (
+                <>
+                  {descriptionText}{" "}
+                  {isLongDescription && (
+                    <button
+                      onClick={() => setIsDescriptionExpanded(false)}
+                      className="action-pill-btn ml-2"
+                      style={{ padding: "2px 8px", fontSize: "0.65rem" }}
+                    >
+                      Collapse
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Row 3 & 4 Grid */}
+        <div className="form-row grid-2">
+          <div style={{ display: "flex", gap: "24px", alignItems: "start" }}>
+            <div className="row-num">03 /</div>
+            <div className="row-content">
+              <span className="row-label">Target Audience</span>
+              <div className="minimal-input">{selectedItem.targetAudience || "General Professionals"}</div>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: "24px", alignItems: "start" }}>
+            <div className="row-num">04 /</div>
+            <div className="row-content">
+              <span className="row-label">Writing Tone</span>
+              <div className="minimal-input">{selectedItem.tone || "General"}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Row 5 */}
+        <div className="form-row">
+          <div className="row-num">05 /</div>
+          <div className="row-content">
+            <span className="row-label">Hook Archetype</span>
+            <div className="minimal-input">{getHookArchetypeLabel(selectedItem.result?.best?.style)}</div>
+          </div>
+        </div>
+
+        {/* Action Button styled like the new debate button */}
         <button
           onClick={() => {
             setEditorFormData({
@@ -115,70 +201,11 @@ export default function PerformanceAnalytics({
             setResult(null);
             setActiveTab("new-publication");
           }}
-          className="custom-btn custom-btn-secondary text-[11px] h-8 px-4 flex items-center justify-center cursor-pointer font-bold"
+          className="minimal-submit-btn"
         >
-          Clone parameters to Editor
+          <span>Clone parameters to Editor</span>
+          <ArrowRight size={18} />
         </button>
-      </div>
-
-      <div className="metadata-grid">
-        <div className="metadata-tile">
-          <span className="metadata-label">
-            <Layers size={12} className="text-zinc-500" />
-            AppName
-          </span>
-          <span className="metadata-value">{selectedItem.appName}</span>
-        </div>
-
-        <div className="metadata-tile">
-          <span className="metadata-label">
-            <MessageSquare size={12} className="text-zinc-500" />
-            Tone
-          </span>
-          <span className="metadata-value">{selectedItem.tone || "General"}</span>
-        </div>
-
-        <div className="metadata-tile">
-          <span className="metadata-label">
-            <Target size={12} className="text-zinc-500" />
-            Target Audience
-          </span>
-          <span className="metadata-value">{selectedItem.targetAudience || "General Professionals"}</span>
-        </div>
-
-        <div className="description-callout">
-          <span className="metadata-label">
-            <Info size={12} className="text-zinc-500" />
-            Prompt Description
-          </span>
-          <div className="description-text">
-            {isLongDescription && !isDescriptionExpanded ? (
-              <>
-                {descriptionText.slice(0, 220)}...{" "}
-                <button
-                  onClick={() => setIsDescriptionExpanded(true)}
-                  className="action-pill-btn ml-2"
-                  style={{ padding: "2px 8px", fontSize: "0.65rem" }}
-                >
-                  Expand
-                </button>
-              </>
-            ) : (
-              <>
-                {descriptionText}{" "}
-                {isLongDescription && (
-                  <button
-                    onClick={() => setIsDescriptionExpanded(false)}
-                    className="action-pill-btn ml-2"
-                    style={{ padding: "2px 8px", fontSize: "0.65rem" }}
-                  >
-                    Collapse
-                  </button>
-                )}
-              </>
-            )}
-          </div>
-        </div>
       </div>
 
       <div className="feedback-loop-section">
