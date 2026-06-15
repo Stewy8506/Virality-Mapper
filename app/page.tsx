@@ -203,17 +203,55 @@ export default function LandingPage() {
 
   return (
     <div style={{ background: "var(--background)", minHeight: "100vh", position: "relative", overflowX: "hidden" }}>
-      
+
       {/* Custom Monospace Loader Overlay */}
       <AnimatePresence>
         {isLoading && (
           <motion.div
             key="custom-loader"
             className="monospace-loader"
-            exit={{ y: "-100%" }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            exit={{ y: "-100%", opacity: 0, filter: "blur(20px)" }}
+            transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
           >
+            {/* Immersive Background Orbs */}
+            <div className="loader-glow-orb loader-glow-orb-1" />
+            <div className="loader-glow-orb loader-glow-orb-2" />
+
             <div className="loader-terminal">
+              {/* Spinning Logo Stack */}
+              <div className="loader-logo-pulse">
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="smiley-svg">
+                  <circle cx="20" cy="20" r="16" stroke="currentColor" strokeWidth="2.5" fill="var(--background)" />
+                  <line x1="20" y1="20" x2="27" y2="13" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                  <line x1="20" y1="20" x2="13" y2="27" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                  <line x1="20" y1="20" x2="13" y2="14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                  <circle cx="20" cy="20" r="3.5" fill="currentColor" />
+                  <circle cx="27" cy="13" r="2.5" fill="currentColor" />
+                  <circle cx="13" cy="27" r="2.5" fill="currentColor" />
+                  <circle cx="13" cy="14" r="2.5" fill="currentColor" />
+                </svg>
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="smiley-svg second">
+                  <circle cx="20" cy="20" r="16" stroke="currentColor" strokeWidth="2.5" fill="var(--background)" />
+                  <line x1="20" y1="20" x2="27" y2="13" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                  <line x1="20" y1="20" x2="13" y2="27" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                  <line x1="20" y1="20" x2="13" y2="14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                  <circle cx="20" cy="20" r="3.5" fill="currentColor" />
+                  <circle cx="27" cy="13" r="2.5" fill="currentColor" />
+                  <circle cx="13" cy="27" r="2.5" fill="currentColor" />
+                  <circle cx="13" cy="14" r="2.5" fill="currentColor" />
+                </svg>
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="smiley-svg third">
+                  <circle cx="20" cy="20" r="16" stroke="currentColor" strokeWidth="2.5" fill="var(--background)" />
+                  <line x1="20" y1="20" x2="27" y2="13" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                  <line x1="20" y1="20" x2="13" y2="27" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                  <line x1="20" y1="20" x2="13" y2="14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                  <circle cx="20" cy="20" r="3.5" fill="currentColor" />
+                  <circle cx="27" cy="13" r="2.5" fill="currentColor" />
+                  <circle cx="13" cy="27" r="2.5" fill="currentColor" />
+                  <circle cx="13" cy="14" r="2.5" fill="currentColor" />
+                </svg>
+              </div>
+
               <div className="loader-header">
                 <span className="loader-header-title">[ VIRALITY MAPPER STUDIO ]</span>
                 <span>v1.0.4</span>
@@ -236,7 +274,7 @@ export default function LandingPage() {
                   <span>{loadingPercent >= 100 ? "[OK]" : (loadingPercent >= 85 ? "[BUSY]" : "[WAIT]")}</span>
                 </div>
               </div>
-              
+
               <div className="loader-progress-section">
                 <div className="loader-progress-info">
                   <span>BOOTING SETTLE ENGINE</span>
@@ -343,13 +381,13 @@ export default function LandingPage() {
               {/* Row 1 */}
               <div className="hero-row-1">
                 <div className="hero-col-left">
-                  <motion.div 
+                  <motion.div
                     className="script-overlay"
                     initial={{ clipPath: "polygon(-50% -100%, -50% -100%, -50% 200%, -50% 200%)", opacity: 0, y: 15 }}
                     animate={isLoading ? "initial" : { clipPath: "polygon(-50% -100%, 150% -100%, 150% 200%, -50% 200%)", opacity: 1, y: 0 }}
                     whileHover={{ scale: 1.05, rotate: -2, y: -5 }}
                     whileTap={{ scale: 0.98 }}
-                    transition={{ 
+                    transition={{
                       clipPath: { duration: 1.4, delay: 1.2, ease: [0.16, 1, 0.3, 1] },
                       opacity: { duration: 0.8, delay: 1.1 },
                       y: { duration: 1.0, delay: 1.1, ease: [0.16, 1, 0.3, 1] },
@@ -634,45 +672,51 @@ export default function LandingPage() {
 
           {/* Bento Grid catalog features list */}
           <section className="bento-section" id="features">
-            <h2 className="catalog-header scroll-reveal">Platform Modules</h2>
+            <div className="relative mb-14">
+              <h2 className="catalog-header scroll-reveal">
+                {"Platform Modules".split("").map((char, idx) => (
+                  <span key={idx}>{char === " " ? "\u00a0" : char}</span>
+                ))}
+              </h2>
+            </div>
 
             <div className="bento-grid">
               <div className="bento-card bento-card-large scroll-reveal">
-                <span className="bento-card-num">01 / DEBATE ARENA</span>
+                <span className="bento-card-num">01</span>
                 <div>
-                  <h3 className="bento-card-title">Parallel Agent Consensus</h3>
+                  <h3 className="bento-card-title">AI Copywriter Debate</h3>
                   <p className="bento-card-desc">
-                    Alpha, Beta, and Gamma agents generate posts in parallel and critique hooks, proof metrics, and readability. Only the settled survivor that addresses all criticisms is outputted.
+                    Three specialized AI agents draft your post and critique each other&apos;s copywriting style. They highlight generic cliches, edit visual line breaks, and vote on the survivor copy.
                   </p>
                 </div>
               </div>
 
               <div className="bento-card scroll-reveal">
-                <span className="bento-card-num">02 / RAG CONTEXT</span>
+                <span className="bento-card-num">02</span>
                 <div>
-                  <h3 className="bento-card-title">Proven Anchoring</h3>
+                  <h3 className="bento-card-title">Self-Improving RAG</h3>
                   <p className="bento-card-desc">
-                    Query previous high-performing structures from your local database context to align generation patterns.
+                    Log views and likes from your published posts. The system feeds successful runs back into the AI context, using your best posts as templates for future copies.
                   </p>
                 </div>
               </div>
 
               <div className="bento-card scroll-reveal">
-                <span className="bento-card-num">03 / FOCUS GROUP</span>
+                <span className="bento-card-num">03</span>
                 <div>
-                  <h3 className="bento-card-title">Audience Simulator</h3>
+                  <h3 className="bento-card-title">Audience Testing</h3>
                   <p className="bento-card-desc">
-                    Pre-evaluate scroll-stopping hook strength and likelihood to comment before publishing copy.
+                    Test your final post against a simulated panel of custom reader personas (VCs, CTOs, founders) to preview comment rates and scroll-stopping probability.
                   </p>
                 </div>
               </div>
 
               <div className="bento-card bento-card-large scroll-reveal">
-                <span className="bento-card-num">04 / TREND GROUNDING</span>
+                <span className="bento-card-num">04</span>
                 <div>
-                  <h3 className="bento-card-title">Search Grounding Pipeline</h3>
+                  <h3 className="bento-card-title">LinkedIn Trend Grounding</h3>
                   <p className="bento-card-desc">
-                    Integrate professional search queries and trending topics directly from professional platforms to optimize feed delivery parameters.
+                    The engine crawls live LinkedIn search topics and regional feeds to extract current hooks, making sure your posts reference active industry conversations.
                   </p>
                 </div>
               </div>
@@ -681,9 +725,15 @@ export default function LandingPage() {
 
           {/* Stepper Pipeline timeline */}
           <section className="timeline-section" id="pipeline">
-            <h2 className="catalog-header scroll-reveal">Consensus Stepper</h2>
+            <div className="relative mb-14">
+              <h2 className="catalog-header scroll-reveal">
+                {"Consensus Stepper".split("").map((char, idx) => (
+                  <span key={idx}>{char === " " ? "\u00a0" : char}</span>
+                ))}
+              </h2>
+            </div>
 
-            <div className="timeline-rail">
+            <div className="stepper-list">
               {[
                 { phase: "Phase 01", title: "Grounding", desc: "Scan trending keywords and query local RAG memory to build copy foundation parameters." },
                 { phase: "Phase 02", title: "Drafting", desc: "Parallel generation models propose distinct structure variants (hooks vs numbers vs stories)." },
@@ -691,11 +741,15 @@ export default function LandingPage() {
                 { phase: "Phase 04", title: "Refinement", desc: "Multi-turn adjustment loops rewrite drafts addressing agent peer reviews." },
                 { phase: "Phase 05", title: "Settle", desc: "Consensus model selects the final survivor copy, ready for clip copying." }
               ].map((step, idx) => (
-                <div key={idx} className="timeline-step scroll-reveal">
-                  <span className="timeline-marker active" />
-                  <span className="timeline-subtitle">{step.phase}</span>
-                  <h4 className="timeline-heading">{step.title}</h4>
-                  <p className="timeline-desc">{step.desc}</p>
+                <div key={idx} className="stepper-row scroll-reveal">
+                  <span className="stepper-index">0{idx + 1} /</span>
+                  <div className="stepper-content">
+                    <div className="stepper-header-group">
+                      <h4 className="timeline-heading" style={{ margin: 0 }}>{step.title}</h4>
+                      <span className="timeline-subtitle" style={{ marginBottom: 0 }}>{step.phase}</span>
+                    </div>
+                    <p className="timeline-desc">{step.desc}</p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -710,7 +764,9 @@ export default function LandingPage() {
                   <span>READY TO SHIFT THE CTR CURVE?</span>
                 </div>
                 <h2 className="cta-title-large">
-                  Settle the copy. Settle the score.
+                  {"Settle the copy. Settle the score.".split("").map((char, idx) => (
+                    <span key={idx}>{char === " " ? "\u00a0" : char}</span>
+                  ))}
                 </h2>
                 <p className="cta-desc">
                   Join the elite group of developers and founders optimizing their growth channels. Ground drafts, simulate debates, and run professional campaigns with peer-critiqued copywriting models.
@@ -754,7 +810,7 @@ export default function LandingPage() {
 
         {/* Minimal Footer */}
         <footer className="minimal-footer">
-          <span>Virality Mapper Studio</span>
+          <span>anv.dev</span>
           <span>&copy; 2026. All rights reserved.</span>
           <div className="flex items-center gap-2" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping"></span>

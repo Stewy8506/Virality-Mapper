@@ -34,8 +34,8 @@ export const metadata: Metadata = {
     "neuromarketing hooks",
     "content optimizer"
   ],
-  authors: [{ name: "Virality Mapper Studio" }],
-  creator: "Virality Mapper Studio",
+  authors: [{ name: "Anuvab Das" }],
+  creator: "anv.dev",
   robots: {
     index: true,
     follow: true,
