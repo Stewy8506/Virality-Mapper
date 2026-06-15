@@ -117,6 +117,14 @@ The 3 refined drafts, their critique histories, and self-change arguments are co
 - **Persistent Credentials & Configurations**: All configurations, API connections, agent templates, custom metrics, and history logs are serialized into a master `vm_master_config` state in `localStorage` in a backward-compatible format. No data is reset on refresh, and no credentials ever touch a database.
 - **Config Backups & Factory Resets**: Export a full JSON config file, import configuration files with validation, or run a factory reset to wipe local browser cache via the Admin Console tab.
 
+### 📚 Documentation Portal & Developer Guide
+- **Dynamic Three-Column Layout**: Integrated a fully responsive documentation guide center under `/docs/*` featuring left-side collapsible navigation, center dynamic article render, and right-side Table of Contents index.
+- **Table of Contents (TOC) Dynamic Scanner**: Layout executes a custom post-hydration query scanner that automatically reads headings (`h2`, `h3`), formats anchors, and populates the TOC sidebar dynamically. Precludes duplicate hash tags (`##`) via custom text regex filters.
+- **Real-Time Sidebar Search**: Monospace search bar matches query letters to guide paths in real-time, dynamically pruning navigation categories.
+- **Decoding Text Hover Effect**: Niche character-scrambling React animation (`<DecodingText />`) that decoder-cycles letters on grid matrices and heading hovers.
+- **Strict 01/02 Typographic Standardization**: Applied signature numbered rows (`01 /`) to primary headings and prepended subparts (`# 01 /`) to subheadings across all pages to match the primary app's minimal styling.
+- **Local Host Security Explanations**: Written comprehensive operational pages detailing RAG looping steps, DuckDuckGo/Yahoo search crawler fallbacks, and local Ollama/LM Studio setup guides.
+
 ### 🔒 Secure Credentials Model & Rate Limiting
 - **AES-256-GCM Session Encryption**: Raw API keys are never sent in generation request bodies. Instead, they are securely synchronized to a server-side endpoint `/api/session`, which encrypts the payload using Node's native `crypto` engine and stores them in a secure `HttpOnly`, `Secure`, `SameSite=Strict` cookie (`vm_session`).
 - **Payload Sanitization**: Automatic parsing limits ensure incoming generation request bodies are strictly capped at **1MB** to prevent denial-of-service attacks.
@@ -152,10 +160,21 @@ virality-mapper/
 │   ├── opengraph-image.tsx         # Dynamic OG image generation
 │   ├── robots.ts                   # robots.txt configuration
 │   ├── sitemap.ts                  # Sitemap generation
-│   └── api/
-│       ├── generate/route.ts       # SSE streaming multi-agent pipeline API
-│       ├── models/route.ts         # Dynamic model list API with rate limiting
-│       └── session/route.ts        # Encrypted HttpOnly session cookie API
+│   ├── api/
+│   │   ├── generate/route.ts       # SSE streaming multi-agent pipeline API
+│   │   ├── models/route.ts         # Dynamic model list API with rate limiting
+│   │   └── session/route.ts        # Encrypted HttpOnly session cookie API
+│   └── docs/                       # Static Documentation Portal (statically optimized)
+│       ├── layout.tsx              # Three-column layout with search & dynamic TOC scanner
+│       ├── about/page.tsx          # 01/05 Platform details (Consensus Arena, grounding, etc.)
+│       ├── about-developer/page.tsx # 01/04 Advanced developer bio with DecodingText & console
+│       ├── contact/page.tsx        # Typographic step-form to contact developer
+│       ├── data-handling/page.tsx  # 01/04 Security audit and SSRF protections guide
+│       ├── methodology/page.tsx    # 01/03 debate engine deep-dive
+│       ├── privacy-policy/page.tsx # 01/04 GDPR/CCPA storage and data collection policy
+│       ├── rag-feedback/page.tsx   # 01/02 RAG analytics configuration instructions
+│       ├── self-hosting/page.tsx   # 01/03 Setup instructions for local model servers
+│       └── terms/page.tsx          # 01/04 acceptable use and licensing agreements
 │
 ├── components/
 │   ├── AgentPlayground.tsx         # Specialist agent configuration panel
@@ -199,9 +218,11 @@ virality-mapper/
 │   ├── workspace.css               # Workspace studio, grids, log consoles
 │   ├── landing.css                 # Hero typography, spotlight grids, animations
 │   ├── responsive.css              # Device layout break-points
-│   └── reduced-motion.css          # Motion reduction stylesheet overrides
+│   ├── reduced-motion.css          # Motion reduction stylesheet overrides
+│   └── docs.css                    # Solid typographic documentation portal styles
 │
 ├── playwright.config.ts            # E2E test configuration
+├── SECURITY.md                     # Security policy with vulnerability reporting channels
 └── vitest.config.ts                # Unit testing configuration
 ```
 
