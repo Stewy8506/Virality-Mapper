@@ -37,7 +37,7 @@ export default function CredentialsTab({
       <div className="flex flex-col gap-1 border-b border-zinc-800 pb-4">
         <h3 className="text-base font-semibold text-white">API Connections</h3>
         <p className="text-xs text-zinc-500">
-          Configure your cloud and local keys. All configurations are stored securely inside your browser storage.
+          Configure your cloud and local keys. Keys are stored in your browser&apos;s localStorage and sent to the server only during generation. For hosted deployments, set server environment variables instead.
         </p>
       </div>
 

@@ -1,11 +1,47 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { decrypt } from "@/lib/crypto";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import type { ApiKeys } from "@/types/domain";
 
 export async function POST(req: Request) {
   try {
-    const { provider, apiKey, customUrl } = await req.json();
+    const contentLength = req.headers.get("content-length");
+    if (contentLength && parseInt(contentLength, 10) > 1024 * 1024) {
+      return NextResponse.json({ error: "Payload size limit exceeded (1MB max)" }, { status: 413 });
+    }
+
+    const rateCheck = checkRateLimit(getClientIp(req));
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: `Rate limit exceeded. Try again in ${Math.ceil((rateCheck.retryAfterMs || 60000) / 1000)} seconds.` },
+        { status: 429 }
+      );
+    }
+
+    const { provider, apiKey: clientApiKey, customUrl } = await req.json();
 
     if (!provider) {
       return NextResponse.json({ error: "Provider is required" }, { status: 400 });
+    }
+
+    let apiKey = clientApiKey;
+    if (!apiKey) {
+      try {
+        const cookieStore = await cookies();
+        const sessionCookie = cookieStore.get("vm_session");
+        if (sessionCookie && sessionCookie.value) {
+          const decrypted = decrypt(sessionCookie.value);
+          const sessionKeys = JSON.parse(decrypted) as Partial<ApiKeys>;
+          if (provider === "gemini") apiKey = sessionKeys.gemini;
+          if (provider === "openai") apiKey = sessionKeys.openai;
+          if (provider === "anthropic") apiKey = sessionKeys.anthropic;
+          if (provider === "openrouter") apiKey = sessionKeys.openrouter;
+          if (provider === "custom") apiKey = sessionKeys.customApiKey;
+        }
+      } catch (e) {
+        console.warn("Failed to decrypt session cookie in models route:", e);
+      }
     }
 
     let models: string[] = [];
@@ -16,10 +52,10 @@ export async function POST(req: Request) {
         try {
           const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
           if (res.ok) {
-            const data = await res.json();
+            const data = (await res.json()) as { models: Array<{ name: string; supportedGenerationMethods: string[] }> };
             models = data.models
-              .filter((m: any) => m.supportedGenerationMethods.includes("generateContent"))
-              .map((m: any) => m.name.replace("models/", ""));
+              .filter((m) => m.supportedGenerationMethods.includes("generateContent"))
+              .map((m) => m.name.replace("models/", ""));
           }
         } catch (e) {
           console.error("Failed to fetch Gemini models:", e);
@@ -33,10 +69,10 @@ export async function POST(req: Request) {
             headers: { Authorization: `Bearer ${apiKey}` },
           });
           if (res.ok) {
-            const data = await res.json();
+            const data = (await res.json()) as { data: Array<{ id: string }> };
             models = data.data
-              .filter((m: any) => m.id.startsWith("gpt") || m.id.startsWith("o1") || m.id.startsWith("chatgpt"))
-              .map((m: any) => m.id);
+              .filter((m) => m.id.startsWith("gpt") || m.id.startsWith("o1") || m.id.startsWith("chatgpt"))
+              .map((m) => m.id);
           }
         } catch (e) {
           console.error("Failed to fetch OpenAI models:", e);
@@ -61,8 +97,8 @@ export async function POST(req: Request) {
             headers: { Authorization: `Bearer ${apiKey}` },
           });
           if (res.ok) {
-            const data = await res.json();
-            models = data.data.map((m: any) => m.id);
+            const data = (await res.json()) as { data: Array<{ id: string }> };
+            models = data.data.map((m) => m.id);
           }
         } catch (e) {
           console.error("Failed to fetch OpenRouter models:", e);
@@ -75,14 +111,14 @@ export async function POST(req: Request) {
           // Try standard tags endpoint first
           const res = await fetch(`${ollamaBase}/api/tags`);
           if (res.ok) {
-            const data = await res.json();
-            models = data.models.map((m: any) => m.name);
+            const data = (await res.json()) as { models: Array<{ name: string }> };
+            models = data.models.map((m) => m.name);
           } else {
             // Try OpenAI endpoint fallback
             const resV1 = await fetch(`${ollamaBase}/v1/models`);
             if (resV1.ok) {
-              const data = await resV1.json();
-              models = data.data.map((m: any) => m.id);
+              const data = (await resV1.json()) as { data: Array<{ id: string }> };
+              models = data.data.map((m) => m.id);
             }
           }
         } catch (e) {
@@ -95,8 +131,8 @@ export async function POST(req: Request) {
         try {
           const res = await fetch(`${lmStudioBase}/v1/models`);
           if (res.ok) {
-            const data = await res.json();
-            models = data.data.map((m: any) => m.id);
+            const data = (await res.json()) as { data: Array<{ id: string }> };
+            models = data.data.map((m) => m.id);
           }
         } catch (e) {
           console.error("Failed to fetch LM Studio models:", e);
@@ -112,8 +148,8 @@ export async function POST(req: Request) {
           }
           const res = await fetch(`${customUrl}/models`, { headers });
           if (res.ok) {
-            const data = await res.json();
-            models = data.data.map((m: any) => m.id);
+            const data = (await res.json()) as { data: Array<{ id: string }> };
+            models = data.data.map((m) => m.id);
           }
         } catch (e) {
           console.error("Failed to fetch Custom models:", e);
@@ -132,8 +168,9 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ success: true, models });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Model fetching route error:", error);
-    return NextResponse.json({ error: error.message || "Failed to fetch models" }, { status: 500 });
+    const errMessage = error instanceof Error ? error.message : "Failed to fetch models";
+    return NextResponse.json({ error: errMessage }, { status: 500 });
   }
 }

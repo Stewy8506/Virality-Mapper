@@ -1,0 +1,186 @@
+/* Mobile workspace & landing responsive overrides */
+
+@media (max-width: 767px) {
+  .dashboard-layout {
+    position: relative;
+  }
+
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
+  }
+
+  .dashboard-layout.sidebar-right .sidebar {
+    left: auto;
+    right: 0;
+    transform: translateX(100%);
+  }
+
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  .sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 45;
+  }
+
+  .sidebar-backdrop.visible {
+    display: block;
+  }
+
+  .main-content {
+    padding: 16px !important;
+    width: 100%;
+  }
+
+  .mobile-menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--border-muted);
+    background: var(--background);
+    color: var(--foreground);
+    cursor: pointer;
+  }
+
+  .settings-modal-content {
+    flex-direction: column !important;
+  }
+
+  .settings-modal-sidebar {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border-muted);
+    flex-direction: row !important;
+    overflow-x: auto;
+    padding: 12px !important;
+  }
+
+  .minimal-nav-links {
+    display: none !important;
+  }
+
+  .mobile-nav-menu {
+    display: flex !important;
+    gap: 8px;
+  }
+}
+
+@media (min-width: 768px) {
+  .mobile-menu-btn {
+    display: none;
+  }
+
+  .mobile-nav-menu {
+    display: none !important;
+  }
+
+  .sidebar-backdrop {
+    display: none !important;
+  }
+}
+
+/* Modal overlay */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+
+.modal-content {
+  background: var(--panel-bg-solid);
+  border: 1px solid var(--border-muted);
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 400px;
+  width: 100%;
+}
+
+.btn-secondary {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border-muted);
+  background: transparent;
+  color: var(--foreground);
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.btn-danger {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: #dc2626;
+  color: white;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+/* LinkedIn char count */
+.char-count-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-muted);
+  font-size: 0.75rem;
+  font-family: var(--font-geist-mono, monospace);
+  color: var(--zinc-400);
+}
+
+.char-count-bar.warning {
+  color: #f59e0b;
+}
+
+.char-count-bar.danger {
+  color: #ef4444;
+}
+
+/* Onboarding banner */
+.onboarding-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border-muted);
+  background: var(--panel-bg);
+  margin-bottom: 16px;
+}
+
+.onboarding-banner p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--zinc-300);
+  line-height: 1.5;
+}
+
+.onboarding-banner button {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-active);
+  background: transparent;
+  color: var(--foreground);
+  cursor: pointer;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}

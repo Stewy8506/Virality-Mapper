@@ -19,7 +19,7 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://virality-booster.vercel.app"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://virality-booster.vercel.app"),
   title: {
     default: "Virality Mapper | Premium AI LinkedIn Ghostwriter",
     template: "%s | Virality Mapper",

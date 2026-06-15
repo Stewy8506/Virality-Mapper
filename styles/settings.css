@@ -1,0 +1,87 @@
+/* Settings Modal Overlay (Slide-in right drawer) */
+.settings-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(5, 5, 8, 0.4);
+  backdrop-filter: blur(20px);
+  z-index: 100;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  /* Align right for slide-out effect */
+}
+
+.settings-modal-container {
+  background: var(--background);
+  border-left: 1px solid var(--border-muted);
+  width: 100%;
+  max-width: 1000px;
+  height: 100%;
+  box-shadow: none;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+  z-index: 101;
+}
+
+html[data-theme="alabaster"] .settings-modal-container {
+  border-left-color: rgba(0, 0, 0, 0.08);
+  box-shadow: none;
+}
+
+.settings-modal-sidebar {
+  width: 260px;
+  border-right: 1px solid var(--border-muted);
+  background: transparent;
+  padding: 48px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-modal-content {
+  flex: 1;
+  padding: 48px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.settings-tab-button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 8px;
+  color: var(--zinc-500);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-muted);
+  width: 100%;
+  text-align: left;
+  transition: color 0.2s ease, border-bottom-color 0.2s ease;
+  outline: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.settings-tab-button:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: transparent;
+}
+
+html[data-theme="alabaster"] .settings-tab-button:hover {
+  background: transparent;
+}
+
+.settings-tab-button.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: transparent;
+  font-weight: 700;
+}

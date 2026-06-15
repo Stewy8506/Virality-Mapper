@@ -43,7 +43,7 @@ export default function PostInputFields({
         <div className="form-row">
           <div className="row-num">01 /</div>
           <div className="row-content">
-            <label className="row-label">We are building (App / Project Name)</label>
+            <label htmlFor="appName" className="row-label">We are building (App / Project Name)</label>
             <input
               required
               type="text"
@@ -60,7 +60,7 @@ export default function PostInputFields({
         <div className="form-row">
           <div className="row-num">02 /</div>
           <div className="row-content">
-            <label className="row-label">What does it do? (Features & Problems Solved)</label>
+            <label htmlFor="description" className="row-label">What does it do? (Features & Problems Solved)</label>
             <textarea
               required
               id="description"
@@ -77,7 +77,7 @@ export default function PostInputFields({
           <div style={{ display: "flex", gap: "24px", alignItems: "start" }}>
             <div className="row-num">03 /</div>
             <div className="row-content">
-              <label className="row-label">Target Audience</label>
+              <label htmlFor="targetAudience" className="row-label">Target Audience</label>
               <input
                 type="text"
                 id="targetAudience"
@@ -93,7 +93,7 @@ export default function PostInputFields({
           <div style={{ display: "flex", gap: "24px", alignItems: "start" }}>
             <div className="row-num">04 /</div>
             <div className="row-content">
-              <label className="row-label">Writing Tone</label>
+              <label htmlFor="tone" className="row-label">Writing Tone</label>
               <input
                 type="text"
                 id="tone"
@@ -110,7 +110,7 @@ export default function PostInputFields({
         <div className="form-row">
           <div className="row-num">05 /</div>
           <div className="row-content">
-            <label className="row-label">Hook Archetype</label>
+            <label htmlFor="hookArchetype" className="row-label">Hook Archetype</label>
             <select
               id="hookArchetype"
               name="hookArchetype"

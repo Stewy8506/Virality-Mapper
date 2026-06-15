@@ -1,498 +1,47 @@
 import { NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
-import OpenAI from "openai";
-import Anthropic from "@anthropic-ai/sdk";
+import { cookies } from "next/headers";
+import { decrypt } from "@/lib/crypto";
 import { findRelevantViralPosts } from "./viralityDb";
 import { convertUnicodeStyles, optimizeMobileSpacing, estimateReadability } from "./formatter";
+import { callLLM, callLLMWithRetry } from "@/lib/llm";
+import { searchLinkedInTrends, FALLBACK_TRENDS } from "@/lib/scraper";
+import { resolveApiKeys, validateAgentsHaveKeys } from "@/lib/api-keys";
+import { getActiveAgents, DEFAULT_ADVANCED_PARAMS } from "@/lib/defaults";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import type { Agent, AdvancedParams, ApiKeys, CrawlerConfig, CustomMetric, CustomPersona, EnrichedSuccessTemplate } from "@/types/domain";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60; // Max execution timeout for Vercel serverless function
+export const maxDuration = 60;
 
-// Helper to sanitize and robustly parse JSON from LLM responses
-function robustJsonParse(text: string): any {
-  let cleanText = text.trim();
-
-  // Remove markdown code blocks if present
-  if (cleanText.includes("```")) {
-    const matches = cleanText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-    if (matches && matches[1]) {
-      cleanText = matches[1].trim();
-    }
-  }
-
-  try {
-    return JSON.parse(cleanText);
-  } catch (e) {
-    // If standard parsing fails, try to find the first '{' and last '}'
-    const firstBrace = cleanText.indexOf("{");
-    const lastBrace = cleanText.lastIndexOf("}");
-    if (firstBrace !== -1 && lastBrace !== -1) {
-      const candidate = cleanText.substring(firstBrace, lastBrace + 1);
-      try {
-        return JSON.parse(candidate);
-      } catch (innerErr) {
-        throw new Error(`Failed to parse response as JSON. Raw: ${text}`);
-      }
-    }
-    throw new Error(`No JSON object found in response. Raw: ${text}`);
-  }
-}
-
-async function callLLM(
-  provider: string,
-  model: string,
-  systemPrompt: string,
-  userPrompt: string,
-  temperature: number,
-  apiKeys: any,
-  advancedParams?: any
-): Promise<any> {
-  const cleanTemp = Math.max(0, Math.min(2, advancedParams?.temperature !== undefined ? advancedParams.temperature : temperature));
-
-  switch (provider) {
-    case "gemini": {
-      if (!apiKeys?.gemini) throw new Error("Gemini API Key is missing.");
-      const ai = new GoogleGenAI({ apiKey: apiKeys.gemini });
-      
-      const config: any = {
-        systemInstruction: systemPrompt,
-        temperature: cleanTemp,
-        responseMimeType: "application/json",
-      };
-
-      if (advancedParams?.topP !== undefined) config.topP = advancedParams.topP;
-      if (advancedParams?.topK !== undefined) config.topK = advancedParams.topK;
-      if (advancedParams?.stopSequences) {
-        config.stopSequences = advancedParams.stopSequences.split(",").map((s: string) => s.trim()).filter(Boolean);
-      }
-
-      const response = await ai.models.generateContent({
-        model: model || "gemini-2.5-flash",
-        contents: userPrompt,
-        config,
-      });
-      const parsed = robustJsonParse(response.text || "{}");
-      return parsed.variants ? parsed.variants[0] : parsed;
-    }
-
-    case "openai": {
-      if (!apiKeys?.openai) throw new Error("OpenAI API Key is missing.");
-      const openai = new OpenAI({ apiKey: apiKeys.openai });
-      
-      const body: any = {
-        model: model || "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: cleanTemp,
-        response_format: { type: "json_object" },
-      };
-
-      if (advancedParams?.topP !== undefined) body.top_p = advancedParams.topP;
-      if (advancedParams?.presencePenalty !== undefined) body.presence_penalty = advancedParams.presencePenalty;
-      if (advancedParams?.frequencyPenalty !== undefined) body.frequency_penalty = advancedParams.frequencyPenalty;
-      if (advancedParams?.seed !== undefined) body.seed = advancedParams.seed;
-      if (advancedParams?.stopSequences) {
-        body.stop = advancedParams.stopSequences.split(",").map((s: string) => s.trim()).filter(Boolean);
-      }
-
-      const response = await openai.chat.completions.create(body);
-      const text = response.choices[0].message.content || "{}";
-      const parsed = robustJsonParse(text);
-      return parsed.variants ? parsed.variants[0] : parsed;
-    }
-
-    case "anthropic": {
-      if (!apiKeys?.anthropic) throw new Error("Anthropic API Key is missing.");
-      const anthropic = new Anthropic({ apiKey: apiKeys.anthropic });
-      
-      const config: any = {
-        model: model || "claude-3-5-sonnet-20241022",
-        max_tokens: 2048,
-        system: systemPrompt,
-        messages: [
-          {
-            role: "user",
-            content: `${userPrompt}\n\nCRITICAL: Respond with a raw, valid JSON object matching the format. Do not wrap in markdown backticks, and do not add conversational preamble.`,
-          },
-        ],
-        temperature: Math.min(1, cleanTemp), // Anthropic only supports 0 to 1 temperature range
-      };
-
-      if (advancedParams?.topP !== undefined) config.top_p = advancedParams.topP;
-      if (advancedParams?.stopSequences) {
-        config.stop_sequences = advancedParams.stopSequences.split(",").map((s: string) => s.trim()).filter(Boolean);
-      }
-
-      const response = await anthropic.messages.create(config);
-
-      let text = "";
-      if (response.content && response.content[0] && response.content[0].type === "text") {
-        text = response.content[0].text;
-      }
-      const parsed = robustJsonParse(text);
-      return parsed.variants ? parsed.variants[0] : parsed;
-    }
-
-    case "openrouter": {
-      if (!apiKeys?.openrouter) throw new Error("OpenRouter API Key is missing.");
-      const openai = new OpenAI({
-        apiKey: apiKeys.openrouter,
-        baseURL: "https://openrouter.ai/api/v1",
-      });
-
-      const body: any = {
-        model: model || "meta-llama/llama-3-8b-instruct:free",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: cleanTemp,
-        response_format: { type: "json_object" },
-      };
-
-      if (advancedParams?.topP !== undefined) body.top_p = advancedParams.topP;
-      if (advancedParams?.presencePenalty !== undefined) body.presence_penalty = advancedParams.presencePenalty;
-      if (advancedParams?.frequencyPenalty !== undefined) body.frequency_penalty = advancedParams.frequencyPenalty;
-      if (advancedParams?.seed !== undefined) body.seed = advancedParams.seed;
-      if (advancedParams?.stopSequences) {
-        body.stop = advancedParams.stopSequences.split(",").map((s: string) => s.trim()).filter(Boolean);
-      }
-
-      const response = await openai.chat.completions.create(body);
-      const text = response.choices[0].message.content || "{}";
-      const parsed = robustJsonParse(text);
-      return parsed.variants ? parsed.variants[0] : parsed;
-    }
-
-    case "ollama": {
-      const baseURL = `${apiKeys?.ollamaUrl || "http://localhost:11434"}/v1`;
-      const openai = new OpenAI({
-        apiKey: "ollama",
-        baseURL,
-      });
-
-      const body: any = {
-        model: model || "llama3",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `${userPrompt}\n\nCRITICAL: Respond with a raw, valid JSON object matching the format. Do not wrap in markdown backticks, and do not add conversational preamble.` },
-        ],
-        temperature: cleanTemp,
-      };
-
-      if (advancedParams?.topP !== undefined) body.top_p = advancedParams.topP;
-      if (advancedParams?.presencePenalty !== undefined) body.presence_penalty = advancedParams.presencePenalty;
-      if (advancedParams?.frequencyPenalty !== undefined) body.frequency_penalty = advancedParams.frequencyPenalty;
-      if (advancedParams?.seed !== undefined) body.seed = advancedParams.seed;
-      if (advancedParams?.stopSequences) {
-        body.stop = advancedParams.stopSequences.split(",").map((s: string) => s.trim()).filter(Boolean);
-      }
-
-      const response = await openai.chat.completions.create(body);
-      const text = response.choices[0].message.content || "{}";
-      const parsed = robustJsonParse(text);
-      return parsed.variants ? parsed.variants[0] : parsed;
-    }
-
-    case "lmstudio": {
-      const baseURL = `${apiKeys?.lmStudioUrl || "http://localhost:1234"}/v1`;
-      const openai = new OpenAI({
-        apiKey: "lmstudio",
-        baseURL,
-      });
-
-      const body: any = {
-        model: model || "model-identifier",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `${userPrompt}\n\nCRITICAL: Respond with a raw, valid JSON object matching the format. Do not wrap in markdown backticks, and do not add conversational preamble.` },
-        ],
-        temperature: cleanTemp,
-      };
-
-      if (advancedParams?.topP !== undefined) body.top_p = advancedParams.topP;
-      if (advancedParams?.presencePenalty !== undefined) body.presence_penalty = advancedParams.presencePenalty;
-      if (advancedParams?.frequencyPenalty !== undefined) body.frequency_penalty = advancedParams.frequencyPenalty;
-      if (advancedParams?.seed !== undefined) body.seed = advancedParams.seed;
-      if (advancedParams?.stopSequences) {
-        body.stop = advancedParams.stopSequences.split(",").map((s: string) => s.trim()).filter(Boolean);
-      }
-
-      const response = await openai.chat.completions.create(body);
-      const text = response.choices[0].message.content || "{}";
-      const parsed = robustJsonParse(text);
-      return parsed.variants ? parsed.variants[0] : parsed;
-    }
-
-    case "custom": {
-      if (!apiKeys?.customBaseUrl) throw new Error("Custom OpenAI endpoint URL is missing.");
-      const openai = new OpenAI({
-        apiKey: apiKeys.customApiKey || "custom",
-        baseURL: apiKeys.customBaseUrl,
-      });
-
-      const body: any = {
-        model: model || "custom-model",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `${userPrompt}\n\nCRITICAL: Respond with a raw, valid JSON object matching the format. Do not wrap in markdown backticks, and do not add conversational preamble.` },
-        ],
-        temperature: cleanTemp,
-      };
-
-      if (advancedParams?.topP !== undefined) body.top_p = advancedParams.topP;
-      if (advancedParams?.presencePenalty !== undefined) body.presence_penalty = advancedParams.presencePenalty;
-      if (advancedParams?.frequencyPenalty !== undefined) body.frequency_penalty = advancedParams.frequencyPenalty;
-      if (advancedParams?.seed !== undefined) body.seed = advancedParams.seed;
-      if (advancedParams?.stopSequences) {
-        body.stop = advancedParams.stopSequences.split(",").map((s: string) => s.trim()).filter(Boolean);
-      }
-
-      const response = await openai.chat.completions.create(body);
-      const text = response.choices[0].message.content || "{}";
-      const parsed = robustJsonParse(text);
-      return parsed.variants ? parsed.variants[0] : parsed;
-    }
-
-    default:
-      throw new Error(`Unsupported provider: ${provider}`);
-  }
-}
-
-async function searchLinkedInTrends(
-  query: string,
-  serpapiKey?: string,
-  crawlerConfig?: { enginePriority: string[]; targetYear: number; serpapiEnabled: boolean }
-): Promise<string[]> {
-  const targetYear = crawlerConfig?.targetYear || new Date().getFullYear();
-  const searchQuery = `site:linkedin.com ${query} post ${targetYear}`;
-  const userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-
-  const serpapiEnabled = crawlerConfig ? crawlerConfig.serpapiEnabled : true;
-
-  // Try SerpApi first if API key is provided and enabled in settings
-  if (serpapiKey && serpapiEnabled) {
-    try {
-      const url = `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(searchQuery)}&api_key=${serpapiKey}&tbs=qdr:m`;
-      const res = await fetch(url);
-      if (res.status === 200) {
-        const json = await res.json();
-        if (json.organic_results && Array.isArray(json.organic_results)) {
-          const snippets = json.organic_results
-            .map((item: any) => item.snippet || item.title || "")
-            .filter((t: string) => t.trim().length > 10)
-            .slice(0, 6);
-          if (snippets.length > 0) {
-            return snippets;
-          }
-        }
-      }
-    } catch (err) {
-      console.warn("SerpApi search trends query failed, falling back to local scraping:", err);
-    }
-  }
-
-  // Follow engine fallbacks order from crawlerConfig
-  const priority = crawlerConfig?.enginePriority || ["yahoo", "duckduckgo_lite", "duckduckgo_html"];
-
-  for (const engine of priority) {
-    if (engine === "yahoo") {
-      try {
-        const url = `https://search.yahoo.com/search?q=${encodeURIComponent(searchQuery)}&age=1m`;
-        const res = await fetch(url, {
-          headers: {
-            "User-Agent": userAgent,
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5"
-          }
-        });
-
-        if (res.status === 200) {
-          const html = await res.text();
-          const snippets: string[] = [];
-          const regex = /<div class="compText[^>]*>([\s\S]*?)<\/div>/gi;
-          let match;
-          while ((match = regex.exec(html)) !== null && snippets.length < 5) {
-            let snippet = match[1]
-              .replace(/<[^>]*>/g, "") // strip HTML tags
-              .replace(/&amp;/g, "&")
-              .replace(/&quot;/g, '"')
-              .replace(/&#x27;/g, "'")
-              .replace(/&lt;/g, "<")
-              .replace(/&gt;/g, ">")
-              .replace(/&hellip;/g, "...")
-              .replace(/\s+/g, " ")
-              .trim();
-            if (snippet) {
-              snippets.push(snippet);
-            }
-          }
-          if (snippets.length > 0) {
-            return snippets;
-          }
-        }
-      } catch (err) {
-        console.warn("Yahoo search fetch failed, falling back in priority:", err);
-      }
-    } else if (engine === "duckduckgo_lite") {
-      try {
-        const url = `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(searchQuery)}&kl=in-en&df=m`;
-        const res = await fetch(url, {
-          headers: {
-            "User-Agent": userAgent,
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5"
-          }
-        });
-
-        if (res.status === 200) {
-          const html = await res.text();
-          const snippets: string[] = [];
-          const regex = /<td class="result-snippet">([\s\S]*?)<\/td>/gi;
-          let match;
-          while ((match = regex.exec(html)) !== null && snippets.length < 5) {
-            let snippet = match[1]
-              .replace(/<[^>]*>/g, "") // strip HTML tags
-              .replace(/&amp;/g, "&")
-              .replace(/&quot;/g, '"')
-              .replace(/&#x27;/g, "'")
-              .replace(/&lt;/g, "<")
-              .replace(/&gt;/g, ">")
-              .replace(/\s+/g, " ")
-              .trim();
-            if (snippet && !snippet.includes("JavaScript is required")) {
-              snippets.push(snippet);
-            }
-          }
-          if (snippets.length > 0) {
-            return snippets;
-          }
-        }
-      } catch (err) {
-        console.warn("DuckDuckGo Lite fetch failed, falling back in priority:", err);
-      }
-    } else if (engine === "duckduckgo_html") {
-      try {
-        const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(searchQuery)}&kl=in-en&df=m`;
-        const res = await fetch(url, {
-          headers: {
-            "User-Agent": userAgent,
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5"
-          }
-        });
-
-        if (res.status === 200) {
-          const html = await res.text();
-          const snippets: string[] = [];
-          const regex = /<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/gi;
-          let match;
-          while ((match = regex.exec(html)) !== null && snippets.length < 5) {
-            let snippet = match[1]
-              .replace(/<[^>]*>/g, "")
-              .replace(/&amp;/g, "&")
-              .replace(/&quot;/g, '"')
-              .replace(/&#x27;/g, "'")
-              .replace(/&lt;/g, "<")
-              .replace(/&gt;/g, ">")
-              .replace(/\s+/g, " ")
-              .trim();
-            if (snippet) snippets.push(snippet);
-          }
-
-          if (snippets.length === 0) {
-            const fallbackRegex = /<div class="result__snippet"[^>]*>([\s\S]*?)<\/div>/gi;
-            while ((match = fallbackRegex.exec(html)) !== null && snippets.length < 5) {
-              let snippet = match[1]
-                .replace(/<[^>]*>/g, "")
-                .replace(/&amp;/g, "&")
-                .replace(/&quot;/g, '"')
-                .replace(/&#x27;/g, "'")
-                .replace(/\s+/g, " ")
-                .trim();
-              if (snippet) snippets.push(snippet);
-            }
-          }
-          if (snippets.length > 0) {
-            return snippets;
-          }
-        }
-      } catch (err) {
-        console.error("DuckDuckGo HTML fetch failed in priority loop:", err);
-      }
-    }
-  }
-
-  return [];
-}
-
-// Configurable timeout for LLM requests in milliseconds
-// To adjust the timeout, change this number (e.g., 30000 for 30 seconds, 45000 for 45 seconds)
-const LLM_TIMEOUT_MS = 30000;
-
-async function callLLMWithRetry(
-  provider: string,
-  model: string,
-  systemPrompt: string,
-  userPrompt: string,
-  temperature: number,
-  apiKeys: any,
-  agentName: string,
-  onActivity: (message: string, type?: "info" | "warning" | "success") => void,
-  maxRetries = 3,
-  advancedParams?: any
-): Promise<any> {
-  let attempt = 0;
-  while (attempt < maxRetries) {
-    attempt++;
-    let timerId: NodeJS.Timeout | null = null;
-    try {
-      onActivity(`[${agentName}] Contacting model... (Attempt ${attempt}/${maxRetries})`, "info");
-      const startTime = Date.now();
-
-      const timeoutPromise = new Promise((_, reject) => {
-        timerId = setTimeout(() => {
-          reject(new Error(`Request timed out after ${LLM_TIMEOUT_MS / 1000} seconds`));
-        }, LLM_TIMEOUT_MS);
-      });
-
-      const result = await Promise.race([
-        callLLM(provider, model, systemPrompt, userPrompt, temperature, apiKeys, advancedParams),
-        timeoutPromise
-      ]);
-
-      if (timerId) clearTimeout(timerId);
-
-      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-      onActivity(`[${agentName}] Completed successfully in ${duration}s.`, "success");
-      return result;
-    } catch (err: any) {
-      if (timerId) clearTimeout(timerId);
-      const isRateLimit = err.status === 429 || err.message?.includes("429") || err.message?.includes("Rate limit") || err.message?.includes("quota") || err.message?.includes("exhausted");
-      const warningMsg = `[${agentName}] Call failed: ${isRateLimit ? "Rate limit / Quota exceeded" : err.message || err}`;
-
-      if (attempt >= maxRetries) {
-        onActivity(`[${agentName}] Max retries reached. Generation will abort/fallback.`, "warning");
-        throw err;
-      }
-
-      const delay = isRateLimit ? 5000 * attempt : 1500 * attempt;
-      onActivity(`${warningMsg}. Retrying in ${(delay / 1000).toFixed(0)}s...`, "warning");
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-  }
+interface LLMAgentResult {
+  content?: string;
+  hookExplanation?: string;
+  score?: number;
+  argument?: string;
+  critique?: string;
+  passes?: boolean;
+  feedback?: string[];
+  scores?: Record<string, number>;
+  synthesisRationale?: string;
+  personas?: Array<{
+    name: string;
+    avatar: string;
+    feedback: string;
+    scrollStopping: number;
+    engagement: number;
+    virality: number;
+  }>;
+  topics?: string[];
 }
 
 async function extractSearchTopics(
   appName: string,
   description: string,
   targetAudience: string,
-  apiKeys: any,
-  agent: any,
+  apiKeys: ApiKeys,
+  agent: Agent,
   onActivity?: (msg: string, type?: "info" | "warning" | "success") => void,
-  advancedParams?: any
+  advancedParams?: AdvancedParams
 ): Promise<string[]> {
   try {
     const systemPrompt = "You are a LinkedIn social media trend analyst. Your job is to identify 2 to 3 broad, high-volume industry keywords or search topics on LinkedIn related to the project context. These should be general concepts likely to have active posts, rather than brand new specific names. Example: if project is 'Framer templates for builders', output broad topics like 'Framer templates', 'Web design systems', 'No-code UI'. Output a JSON object.";
@@ -513,7 +62,7 @@ Example format:
       : await callLLM(agent.provider, agent.model, systemPrompt, userPrompt, 0.2, apiKeys, advancedParams);
 
     if (res && Array.isArray(res.topics)) {
-      return res.topics.map((t: string) => t.trim()).filter(Boolean);
+      return (res.topics as string[]).map((t) => t.trim()).filter(Boolean);
     }
     return [appName];
   } catch (e) {
@@ -524,20 +73,47 @@ Example format:
 
 export async function POST(req: Request) {
   try {
-    const { 
-      appName, 
-      description, 
-      targetAudience, 
-      tone, 
-      apiKeys, 
-      agents, 
-      hookArchetype, 
+    const contentLength = req.headers.get("content-length");
+    if (contentLength && parseInt(contentLength, 10) > 1024 * 1024) {
+      return NextResponse.json({ error: "Payload size limit exceeded (1MB max)" }, { status: 413 });
+    }
+
+    const rateCheck = checkRateLimit(getClientIp(req));
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: `Rate limit exceeded. Try again in ${Math.ceil((rateCheck.retryAfterMs || 60000) / 1000)} seconds.` },
+        { status: 429 }
+      );
+    }
+
+    const body = await req.json();
+    const {
+      appName,
+      description,
+      targetAudience,
+      tone,
+      apiKeys: clientApiKeys,
+      agents,
+      hookArchetype,
       enrichedSuccessTemplates,
       customMetrics,
       customPersonas,
       crawlerConfig,
-      advancedParams
-    } = await req.json();
+      advancedParams,
+    }: {
+      appName: string;
+      description: string;
+      targetAudience?: string;
+      tone?: string;
+      apiKeys?: Partial<ApiKeys>;
+      agents?: Agent[];
+      hookArchetype?: string;
+      enrichedSuccessTemplates?: EnrichedSuccessTemplate[];
+      customMetrics?: CustomMetric[];
+      customPersonas?: CustomPersona[];
+      crawlerConfig?: CrawlerConfig;
+      advancedParams?: AdvancedParams;
+    } = body;
 
     if (!appName || !description) {
       return NextResponse.json(
@@ -546,22 +122,46 @@ export async function POST(req: Request) {
       );
     }
 
-    const activeAgents = agents || [];
+    let sessionKeys: Partial<ApiKeys> = {};
+    try {
+      const cookieStore = await cookies();
+      const sessionCookie = cookieStore.get("vm_session");
+      if (sessionCookie && sessionCookie.value) {
+        const decrypted = decrypt(sessionCookie.value);
+        sessionKeys = JSON.parse(decrypted);
+      }
+    } catch (e) {
+      console.warn("Failed to decrypt session cookie:", e);
+    }
+
+    const mergedKeys = {
+      ...sessionKeys,
+      ...clientApiKeys,
+    };
+
+    const resolvedKeys = resolveApiKeys(mergedKeys);
+    const activeAgents = getActiveAgents(agents || []);
     if (activeAgents.length < 3) {
       return NextResponse.json(
-        { error: "This debate flow requires exactly 3 configured agents." },
+        { error: "This debate flow requires exactly 3 enabled agents." },
         { status: 400 }
       );
     }
 
-    const [agentA, agentB, agentC] = activeAgents;
+    const keyError = validateAgentsHaveKeys(activeAgents, resolvedKeys);
+    if (keyError) {
+      return NextResponse.json({ error: keyError }, { status: 400 });
+    }
+
+    const [agentA, agentB, agentC] = activeAgents as [Agent, Agent, Agent];
+    const apiKeys = resolvedKeys;
 
     const encoder = new TextEncoder();
 
     let isClosed = false;
     const stream = new ReadableStream({
       async start(controller) {
-        const sendEvent = (event: string, data: any) => {
+        const sendEvent = (event: string, data: unknown) => {
           if (isClosed) return;
           try {
             controller.enqueue(
@@ -579,7 +179,7 @@ export async function POST(req: Request) {
           const topics = await extractSearchTopics(
             appName,
             description,
-            targetAudience,
+            targetAudience || "General Professionals",
             apiKeys,
             agentA,
             (msg, type) => sendEvent("activity", { message: msg, type }),
@@ -607,12 +207,7 @@ export async function POST(req: Request) {
 
           if (liveTrends.length === 0) {
             sendEvent("activity", { message: "Scraper yielded 0 hits. Injecting high-performing LinkedIn copywriting templates for grounding...", type: "warning" });
-            liveTrends.push(
-              "Hook Idea: '99% of AI LinkedIn posts fail. Not because the AI is bad, but because the prompts are too polite.'",
-              "Hook Idea: 'Stop prompting. Start orchestrating. (How I built a multi-agent writing console)'",
-              "Structure: Hook (Pattern Interrupt) -> Body (Actionable 3-part list with bold metrics) -> Outro (Clear, low-friction CTA)",
-              "Guideline: Keep paragraphs under 2 sentences. Use crisp whitespace formatting. Do not use generic hashtags."
-            );
+            liveTrends.push(...FALLBACK_TRENDS);
           }
 
           sendEvent("trends", liveTrends);
@@ -638,12 +233,13 @@ Structural Analysis:
 `).join("\n")}`;
 
           // Helper to run LLM with retry & activity logs
-          const runAgentCall = async (agent: any, systemPrompt: string, userPrompt: string, contextName: string) => {
-            const mergedParams = {
+          const runAgentCall = async (agent: Agent, systemPrompt: string, userPrompt: string, contextName: string): Promise<LLMAgentResult> => {
+            const mergedParams: AdvancedParams = {
+              ...DEFAULT_ADVANCED_PARAMS,
               ...advancedParams,
-              temperature: agent.temperature !== undefined ? agent.temperature : advancedParams?.temperature
+              temperature: agent.temperature !== undefined ? agent.temperature : (advancedParams?.temperature !== undefined ? advancedParams.temperature : DEFAULT_ADVANCED_PARAMS.temperature)
             };
-            return await callLLMWithRetry(
+            return (await callLLMWithRetry(
               agent.provider,
               agent.model,
               agent.systemPrompt + "\n\n" + systemPrompt,
@@ -656,7 +252,7 @@ Structural Analysis:
               },
               3,
               mergedParams
-            );
+            )) as LLMAgentResult;
           };
 
           // Build Hook Archetype Copywriting Rules
@@ -711,27 +307,17 @@ Example:
           let draftA, draftB, draftC;
 
           try {
-            draftA = await runAgentCall(agentA, "You are drafting an initial viral LinkedIn post.", draftUserPrompt, "Drafting");
-            sendEvent("draft-complete", { name: agentA.name, content: draftA.content, hookExplanation: draftA.hookExplanation, provider: agentA.provider, model: agentA.model });
-          } catch (err: any) {
-            console.error("Draft A failed:", err);
-            throw new Error(`[${agentA.name}] draft failed: ${err.message || err}`);
-          }
-
-          try {
-            draftB = await runAgentCall(agentB, "You are drafting an initial viral LinkedIn post.", draftUserPrompt, "Drafting");
-            sendEvent("draft-complete", { name: agentB.name, content: draftB.content, hookExplanation: draftB.hookExplanation, provider: agentB.provider, model: agentB.model });
-          } catch (err: any) {
-            console.error("Draft B failed:", err);
-            throw new Error(`[${agentB.name}] draft failed: ${err.message || err}`);
-          }
-
-          try {
-            draftC = await runAgentCall(agentC, "You are drafting an initial viral LinkedIn post.", draftUserPrompt, "Drafting");
-            sendEvent("draft-complete", { name: agentC.name, content: draftC.content, hookExplanation: draftC.hookExplanation, provider: agentC.provider, model: agentC.model });
-          } catch (err: any) {
-            console.error("Draft C failed:", err);
-            throw new Error(`[${agentC.name}] draft failed: ${err.message || err}`);
+            [draftA, draftB, draftC] = await Promise.all([
+              runAgentCall(agentA, "You are drafting an initial viral LinkedIn post.", draftUserPrompt, "Drafting"),
+              runAgentCall(agentB, "You are drafting an initial viral LinkedIn post.", draftUserPrompt, "Drafting"),
+              runAgentCall(agentC, "You are drafting an initial viral LinkedIn post.", draftUserPrompt, "Drafting"),
+            ]);
+            for (const [agent, draft] of [[agentA, draftA], [agentB, draftB], [agentC, draftC]] as const) {
+              sendEvent("draft-complete", { name: agent.name, content: draft.content, hookExplanation: draft.hookExplanation, provider: agent.provider, model: agent.model });
+            }
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            throw new Error(`Draft phase failed: ${msg}`);
           }
 
           // Step 3: Phase 2 (Critique Arena)
@@ -740,51 +326,28 @@ Example:
           let critiqueAtoB, critiqueBtoA, critiqueBtoC, critiqueCtoB, critiqueAtoC, critiqueCtoA;
 
           try {
-            critiqueAtoB = await runAgentCall(agentA, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Beta:\n"${draftB.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Beta");
-            sendEvent("critique-complete", { from: agentA.name, to: agentB.name, content: critiqueAtoB.critique, score: critiqueAtoB.score });
-          } catch (err: any) {
-            console.error("Critique A->B failed:", err);
-            throw new Error(`[${agentA.name} critiquing ${agentB.name}] failed: ${err.message || err}`);
-          }
-
-          try {
-            critiqueBtoA = await runAgentCall(agentB, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Alpha:\n"${draftA.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Alpha");
-            sendEvent("critique-complete", { from: agentB.name, to: agentA.name, content: critiqueBtoA.critique, score: critiqueBtoA.score });
-          } catch (err: any) {
-            console.error("Critique B->A failed:", err);
-            throw new Error(`[${agentB.name} critiquing ${agentA.name}] failed: ${err.message || err}`);
-          }
-
-          try {
-            critiqueBtoC = await runAgentCall(agentB, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Gamma:\n"${draftC.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Gamma");
-            sendEvent("critique-complete", { from: agentB.name, to: agentC.name, content: critiqueBtoC.critique, score: critiqueBtoC.score });
-          } catch (err: any) {
-            console.error("Critique B->C failed:", err);
-            throw new Error(`[${agentB.name} critiquing ${agentC.name}] failed: ${err.message || err}`);
-          }
-
-          try {
-            critiqueCtoB = await runAgentCall(agentC, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Beta:\n"${draftB.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Beta");
-            sendEvent("critique-complete", { from: agentC.name, to: agentB.name, content: critiqueCtoB.critique, score: critiqueCtoB.score });
-          } catch (err: any) {
-            console.error("Critique C->B failed:", err);
-            throw new Error(`[${agentC.name} critiquing ${agentB.name}] failed: ${err.message || err}`);
-          }
-
-          try {
-            critiqueAtoC = await runAgentCall(agentA, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Gamma:\n"${draftC.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Gamma");
-            sendEvent("critique-complete", { from: agentA.name, to: agentC.name, content: critiqueAtoC.critique, score: critiqueAtoC.score });
-          } catch (err: any) {
-            console.error("Critique A->C failed:", err);
-            throw new Error(`[${agentA.name} critiquing ${agentC.name}] failed: ${err.message || err}`);
-          }
-
-          try {
-            critiqueCtoA = await runAgentCall(agentC, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Alpha:\n"${draftA.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Alpha");
-            sendEvent("critique-complete", { from: agentC.name, to: agentA.name, content: critiqueCtoA.critique, score: critiqueCtoA.score });
-          } catch (err: any) {
-            console.error("Critique C->A failed:", err);
-            throw new Error(`[${agentC.name} critiquing ${agentA.name}] failed: ${err.message || err}`);
+            [critiqueAtoB, critiqueBtoA, critiqueBtoC, critiqueCtoB, critiqueAtoC, critiqueCtoA] = await Promise.all([
+              runAgentCall(agentA, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Beta:\n"${draftB.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Beta"),
+              runAgentCall(agentB, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Alpha:\n"${draftA.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Alpha"),
+              runAgentCall(agentB, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Gamma:\n"${draftC.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Gamma"),
+              runAgentCall(agentC, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Beta:\n"${draftB.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Beta"),
+              runAgentCall(agentA, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Gamma:\n"${draftC.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Gamma"),
+              runAgentCall(agentC, "You are a reviewer critiquing a draft written by your peer.", `Evaluate this draft written by Agent Alpha:\n"${draftA.content}"\n\nProvide constructive, sharp critique and a rating out of 100.\n\nCRITICAL FORMAT:\n{\n  "critique": "...",\n  "score": 80\n}`, "Critique Alpha"),
+            ]);
+            const critiqueEvents = [
+              { from: agentA.name, to: agentB.name, result: critiqueAtoB },
+              { from: agentB.name, to: agentA.name, result: critiqueBtoA },
+              { from: agentB.name, to: agentC.name, result: critiqueBtoC },
+              { from: agentC.name, to: agentB.name, result: critiqueCtoB },
+              { from: agentA.name, to: agentC.name, result: critiqueAtoC },
+              { from: agentC.name, to: agentA.name, result: critiqueCtoA },
+            ];
+            for (const evt of critiqueEvents) {
+              sendEvent("critique-complete", { from: evt.from, to: evt.to, content: evt.result.critique, score: evt.result.score });
+            }
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            throw new Error(`Critique phase failed: ${msg}`);
           }
 
           // Step 4: Phase 3 (Refinement based on critiques)
@@ -868,27 +431,17 @@ Example:
           let refinedA, refinedB, refinedC;
 
           try {
-            refinedA = await runAgentCall(agentA, "You are refining your original LinkedIn post based on peer critique.", refinePromptA, "Refinement");
-            sendEvent("refine-complete", { name: agentA.name, content: refinedA.content, score: refinedA.score, argument: refinedA.argument, provider: agentA.provider, model: agentA.model });
-          } catch (err: any) {
-            console.error("Refinement A failed:", err);
-            throw new Error(`[${agentA.name}] refinement failed: ${err.message || err}`);
-          }
-
-          try {
-            refinedB = await runAgentCall(agentB, "You are refining your original LinkedIn post based on peer critique.", refinePromptB, "Refinement");
-            sendEvent("refine-complete", { name: agentB.name, content: refinedB.content, score: refinedB.score, argument: refinedB.argument, provider: agentB.provider, model: agentB.model });
-          } catch (err: any) {
-            console.error("Refinement B failed:", err);
-            throw new Error(`[${agentB.name}] refinement failed: ${err.message || err}`);
-          }
-
-          try {
-            refinedC = await runAgentCall(agentC, "You are refining your original LinkedIn post based on peer critique.", refinePromptC, "Refinement");
-            sendEvent("refine-complete", { name: agentC.name, content: refinedC.content, score: refinedC.score, argument: refinedC.argument, provider: agentC.provider, model: agentC.model });
-          } catch (err: any) {
-            console.error("Refinement C failed:", err);
-            throw new Error(`[${agentC.name}] refinement failed: ${err.message || err}`);
+            [refinedA, refinedB, refinedC] = await Promise.all([
+              runAgentCall(agentA, "You are refining your original LinkedIn post based on peer critique.", refinePromptA, "Refinement"),
+              runAgentCall(agentB, "You are refining your original LinkedIn post based on peer critique.", refinePromptB, "Refinement"),
+              runAgentCall(agentC, "You are refining your original LinkedIn post based on peer critique.", refinePromptC, "Refinement"),
+            ]);
+            for (const [agent, refined] of [[agentA, refinedA], [agentB, refinedB], [agentC, refinedC]] as const) {
+              sendEvent("refine-complete", { name: agent.name, content: refined.content, score: refined.score, argument: refined.argument, provider: agent.provider, model: agent.model });
+            }
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            throw new Error(`Refinement phase failed: ${msg}`);
           }
 
           // Step 5: Phase 4 (Consensus Settle / Synthesis)
@@ -899,9 +452,9 @@ Example:
           let metricsJsonStructure = "";
           if (customMetrics && customMetrics.length > 0) {
             metricsPromptInstructions = `You MUST evaluate the post against the following custom metrics:
-${customMetrics.map((m: any) => `- ${m.name} (JSON property/key: "${m.id}"): ${m.scoringInstructions}`).join("\n")}
+${customMetrics.map((m: CustomMetric) => `- ${m.name} (JSON property/key: "${m.id}"): ${m.scoringInstructions}`).join("\n")}
 `;
-            const schemaFields = customMetrics.map((m: any) => `    "${m.id}": <score between 0 and 100>`).join(",\n");
+            const schemaFields = customMetrics.map((m: CustomMetric) => `    "${m.id}": <score between 0 and 100>`).join(",\n");
             metricsJsonStructure = `{\n  "content": "The finalized absolute best LinkedIn post content...",\n  "scores": {\n${schemaFields}\n  },\n  "synthesisRationale": "..."\n}`;
           } else {
             metricsPromptInstructions = `You MUST evaluate the post against the following standard metrics:
@@ -975,7 +528,7 @@ CRITICAL FORMAT REQUIREMENT:
 ${metricsJsonStructure}
 `;
 
-          let finalOutcome;
+          let finalOutcome: LLMAgentResult;
           try {
             const judgeAgent = {
               ...agentA,
@@ -1027,9 +580,13 @@ CRITICAL FORMAT REQUIREMENT:
                 (msg, type = "info") => sendEvent("activity", { message: msg, type })
               );
 
-              if (auditResult && (!auditResult.passes || auditResult.score < 90) && auditResult.feedback && auditResult.feedback.length > 0) {
-                const issuesStr = auditResult.feedback.join(", ");
-                sendEvent("activity", { message: `[Auditor] Post scored ${auditResult.score}/100. Issues detected: ${issuesStr}. Initiating algorithmic refinement...`, type: "warning" });
+              const auditPasses = auditResult?.passes as boolean | undefined;
+              const auditScore = Number(auditResult?.score ?? 100);
+              const auditFeedback = auditResult?.feedback as string[] | undefined;
+
+              if (auditResult && (!auditPasses || auditScore < 90) && auditFeedback && auditFeedback.length > 0) {
+                const issuesStr = auditFeedback.join(", ");
+                sendEvent("activity", { message: `[Auditor] Post scored ${auditScore}/100. Issues detected: ${issuesStr}. Initiating algorithmic refinement...`, type: "warning" });
 
                 const autoRefinePrompt = `
 You are the Consensus Settle Panel. The LinkedIn Algorithm Auditor has rejected your consolidated post because it failed critical checks.
@@ -1040,7 +597,7 @@ ${finalOutcome.content}
 ---
 
 AUDITOR FEEDBACK:
-${auditResult.feedback.map((f: string, i: number) => `${i + 1}. ${f}`).join("\n")}
+${auditFeedback.map((f: string, i: number) => `${i + 1}. ${f}`).join("\n")}
 
 Please rewrite the post to fully correct all feedback items. Keep all other aspects of the post intact (such as metrics, the anchor metaphor, and the CTA strategy).
 
@@ -1062,16 +619,17 @@ ${metricsJsonStructure}
                   sendEvent("activity", { message: "[Auditor] Post successfully refined and validated by simulator.", type: "success" });
                 }
               } else {
-                sendEvent("activity", { message: `[Auditor] Algorithmic audit passed successfully! (Score: ${auditResult?.score || 95}/100)`, type: "success" });
+                sendEvent("activity", { message: `[Auditor] Algorithmic audit passed successfully! (Score: ${auditScore}/100)`, type: "success" });
               }
-            } catch (auditErr: any) {
+            } catch (auditErr: unknown) {
               console.warn("Algorithm audit pipeline failed or timed out:", auditErr);
-              sendEvent("activity", { message: `[Auditor] Audit pipeline bypassed (${auditErr.message || auditErr}). Proceeding to styling.`, type: "warning" });
+              const errMsg = auditErr instanceof Error ? auditErr.message : String(auditErr);
+              sendEvent("activity", { message: `[Auditor] Audit pipeline bypassed (${errMsg}). Proceeding to styling.`, type: "warning" });
             }
 
             // Step 4.6: Run post-formatting sanitization (Unicode styling cleaner, mobile pacing, readability calculator)
             try {
-              let sanitizedContent = convertUnicodeStyles(finalOutcome.content);
+              let sanitizedContent = convertUnicodeStyles(finalOutcome.content || "");
               sanitizedContent = optimizeMobileSpacing(sanitizedContent);
               
               const readabilityMetrics = estimateReadability(sanitizedContent);
@@ -1080,10 +638,11 @@ ${metricsJsonStructure}
               finalOutcome.content = sanitizedContent;
               if (finalOutcome.scores) {
                 // Determine if we need to put readability in standard or custom key
-                const readabilityKey = (customMetrics && customMetrics.find((m: any) => m.id.toLowerCase() === "readability")) ? customMetrics.find((m: any) => m.id.toLowerCase() === "readability").id : "readability";
+                const foundMetric = customMetrics?.find((m: CustomMetric) => m.id.toLowerCase() === "readability");
+                const readabilityKey = foundMetric ? foundMetric.id : "readability";
                 finalOutcome.scores[readabilityKey] = readabilityMetrics.easeScore;
               }
-            } catch (fmtErr: any) {
+            } catch (fmtErr: unknown) {
               console.error("Formatting sanitization failed:", fmtErr);
             }
 
@@ -1094,7 +653,7 @@ ${metricsJsonStructure}
 
               let personasPromptList = "";
               if (customPersonas && customPersonas.length > 0) {
-                personasPromptList = customPersonas.map((p: any, idx: number) => {
+                personasPromptList = customPersonas.map((p: CustomPersona, idx: number) => {
                   return `${idx + 1}. "${p.name}" (${p.avatar || "👤"}) - ${p.description} (Comment Ratio Modifier: ${p.commentRatio}%)`;
                 }).join("\n");
               } else {
@@ -1154,35 +713,38 @@ Example:
                 finalOutcome.personas = personasResult.personas;
                 sendEvent("activity", { message: `[A/B Panel] Focus group simulation complete. Evaluated ${personasResult.personas.length} personas successfully.`, type: "success" });
               }
-            } catch (pErr: any) {
+            } catch (pErr: unknown) {
               console.warn("Persona focus group simulation failed:", pErr);
-              sendEvent("activity", { message: `[A/B Panel] Bypassed focus group evaluation (${pErr.message || pErr})`, type: "warning" });
+              const errMsg = pErr instanceof Error ? pErr.message : String(pErr);
+              sendEvent("activity", { message: `[A/B Panel] Bypassed focus group evaluation (${errMsg})`, type: "warning" });
             }
 
-          } catch (e: any) {
+          } catch (e: unknown) {
             console.error("Synthesis failed, falling back to top scored refined draft:", e);
             const sorted = [
               { name: agentA.name, ...refinedA },
               { name: agentB.name, ...refinedB },
               { name: agentC.name, ...refinedC }
-            ].sort((a, b) => b.score - a.score);
+            ].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
 
+            const topScore = sorted[0].score ?? 90;
             const fallbackScores: Record<string, number> = {};
             if (customMetrics && customMetrics.length > 0) {
-              customMetrics.forEach((m: any) => {
-                fallbackScores[m.id] = sorted[0].score;
+              customMetrics.forEach((m: CustomMetric) => {
+                fallbackScores[m.id] = topScore;
               });
             } else {
-              fallbackScores.hookStrength = sorted[0].score;
-              fallbackScores.readability = sorted[0].score;
-              fallbackScores.credibility = sorted[0].score;
-              fallbackScores.viralPotential = sorted[0].score;
+              fallbackScores.hookStrength = topScore;
+              fallbackScores.readability = topScore;
+              fallbackScores.credibility = topScore;
+              fallbackScores.viralPotential = topScore;
             }
 
+            const synthesisErrorMsg = e instanceof Error ? e.message : String(e);
             finalOutcome = {
-              content: sorted[0].content,
+              content: sorted[0].content || "",
               scores: fallbackScores,
-              synthesisRationale: `Consensus synthesis failed (${e.message}). Fell back to the highest scoring refined draft.`
+              synthesisRationale: `Consensus synthesis failed (${synthesisErrorMsg}). Fell back to the highest scoring refined draft.`
             };
           }
 
@@ -1195,14 +757,15 @@ Example:
               personas: finalOutcome.personas || []
             }
           });
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.error("Consensus stream worker error:", err);
-          sendEvent("error", { message: err.message || "An unexpected generation pipeline error occurred." });
+          const errMessage = err instanceof Error ? err.message : "An unexpected generation pipeline error occurred.";
+          sendEvent("error", { message: errMessage });
         } finally {
           isClosed = true;
           try {
             controller.close();
-          } catch (e) { }
+          } catch {}
         }
       },
       cancel() {
@@ -1218,10 +781,11 @@ Example:
       },
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Consensus generation initialization error:", error);
+    const errMessage = error instanceof Error ? error.message : "Failed to initialize debate stream";
     return NextResponse.json(
-      { error: error.message || "Failed to initialize debate stream" },
+      { error: errMessage },
       { status: 500 }
     );
   }

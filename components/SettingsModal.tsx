@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CheckCircle2, Loader2, Save, Sliders } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import CredentialsTab from "./settings/CredentialsTab";
@@ -129,6 +129,54 @@ export default function SettingsModal({
   onSaveCustomCss: (css: string) => void;
 }) {
   const [activeTab, setActiveTab] = useState<TabType>("credentials");
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+
+      if (e.key === "Tab" && modalRef.current) {
+        const focusableElements = modalRef.current.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusableElements.length === 0) return;
+
+        const firstElement = focusableElements[0] as HTMLElement;
+        const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+
+        if (e.shiftKey) {
+          if (document.activeElement === firstElement) {
+            lastElement.focus();
+            e.preventDefault();
+          }
+        } else {
+          if (document.activeElement === lastElement) {
+            firstElement.focus();
+            e.preventDefault();
+          }
+        }
+      }
+    };
+
+    setTimeout(() => {
+      if (modalRef.current) {
+        const focusable = modalRef.current.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length > 0) {
+          (focusable[0] as HTMLElement).focus();
+        }
+      }
+    }, 50);
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
   const [configState, setConfigState] = useState<MasterConfig>(masterConfig);
   const [cssOverride, setCssOverride] = useState(customCss);
 
@@ -401,12 +449,17 @@ export default function SettingsModal({
       {isOpen && (
         <div className="settings-modal-backdrop" onClick={onClose}>
           <motion.div
+            ref={modalRef}
             initial={{ opacity: 0, x: "100%" }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: "100%" }}
             transition={{ type: "spring", stiffness: 350, damping: 30 }}
             className="settings-modal-container"
             onClick={(e) => e.stopPropagation()}
+            tabIndex={-1}
+            aria-modal="true"
+            role="dialog"
+            aria-label="Settings configuration modal"
           >
             {/* Modal Sidebar Tab List */}
             <div className="settings-modal-sidebar">

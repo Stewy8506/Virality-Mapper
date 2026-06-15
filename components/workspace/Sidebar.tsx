@@ -53,6 +53,8 @@ interface ArchivedPost {
 interface SidebarProps {
   isSidebarCollapsed: boolean;
   toggleSidebar: () => void;
+  isMobileOpen?: boolean;
+  onMobileClose?: () => void;
   activeTab: "workspace" | "new-publication" | "agents";
   setActiveTab: (tab: "workspace" | "new-publication" | "agents") => void;
   selectedArchiveId: string | null;
@@ -69,6 +71,8 @@ interface SidebarProps {
 export default function Sidebar({
   isSidebarCollapsed,
   toggleSidebar,
+  isMobileOpen = false,
+  onMobileClose,
   activeTab,
   setActiveTab,
   selectedArchiveId,
@@ -81,6 +85,11 @@ export default function Sidebar({
   preferences,
   setIsSettingsOpen,
 }: SidebarProps) {
+  const navigate = (tab: "workspace" | "new-publication" | "agents") => {
+    setActiveTab(tab);
+    onMobileClose?.();
+  };
+
   const filteredArchive = archive.filter(item =>
     item.appName.toLowerCase().includes(archiveSearch.toLowerCase()) ||
     item.description.toLowerCase().includes(archiveSearch.toLowerCase()) ||
@@ -88,7 +97,7 @@ export default function Sidebar({
   );
 
   return (
-    <aside className={`sidebar ${isSidebarCollapsed ? "collapsed" : ""}`}>
+    <aside className={`sidebar ${isSidebarCollapsed ? "collapsed" : ""} ${isMobileOpen ? "mobile-open" : ""}`} role="navigation" aria-label="Workspace navigation">
       <div className="flex flex-col gap-6 flex-1 overflow-hidden">
         {/* Header & toggle menu */}
         <div className="flex items-center justify-between w-full sidebar-header-container">
@@ -113,7 +122,7 @@ export default function Sidebar({
           onClick={() => {
             setSelectedArchiveId(null);
             setResult(null);
-            setActiveTab("new-publication");
+            navigate("new-publication");
           }}
           style={{ padding: "12px 18px", fontSize: "0.82rem" }}
           title="Create New Publication"
@@ -128,7 +137,7 @@ export default function Sidebar({
             className={`nav-item ${activeTab === "workspace" && !selectedArchiveId ? "active" : ""}`}
             onClick={() => {
               setSelectedArchiveId(null);
-              setActiveTab("workspace");
+              navigate("workspace");
             }}
             title="Workspace Control Hub"
           >
@@ -137,7 +146,7 @@ export default function Sidebar({
           </div>
           <div
             className={`nav-item ${activeTab === "agents" ? "active" : ""}`}
-            onClick={() => setActiveTab("agents")}
+            onClick={() => navigate("agents")}
             title="Specialist Agents"
           >
             <Sliders size={16} />
@@ -184,7 +193,7 @@ export default function Sidebar({
                   onClick={() => {
                     setSelectedArchiveId(item.id);
                     setResult(item.result);
-                    setActiveTab("workspace");
+                    navigate("workspace");
                   }}
                   className={`sidebar-archive-item ${selectedArchiveId === item.id ? "active" : ""}`}
                 >

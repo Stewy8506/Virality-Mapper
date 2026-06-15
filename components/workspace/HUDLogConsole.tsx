@@ -169,7 +169,7 @@ export default function HUDLogConsole({
           </div>
         </div>
 
-        <div className="hud-console-body" ref={activityContainerRef} data-lenis-prevent>
+        <div className="hud-console-body" ref={activityContainerRef} data-lenis-prevent aria-live="polite" aria-label="Generation activity log">
           {activityLogs.length === 0 ? (
             <div className="text-zinc-600 italic font-mono text-[10px]">Initializing secure debate arena crawler pipelines...</div>
           ) : (

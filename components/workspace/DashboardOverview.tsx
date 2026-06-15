@@ -95,8 +95,18 @@ export default function DashboardOverview({
     ? (validScores.reduce((sum, s) => sum + s, 0) / validScores.length).toFixed(1) + "/10"
     : "N/A";
 
+  const hasAnyKey = !!(apiKeys.gemini || apiKeys.openai || apiKeys.anthropic || apiKeys.openrouter);
+
   return (
     <div className="flex flex-col gap-8 w-full animate-fade-up">
+      {!hasAnyKey && (
+        <div className="onboarding-banner" role="status">
+          <div>
+            <p><strong>Get started:</strong> Open Settings and add at least one API key (Gemini, OpenAI, or Anthropic). Then configure 3 enabled agents in the Specialist Agents tab before running your first debate.</p>
+          </div>
+          <button type="button" onClick={() => setIsSettingsOpen(true)}>Open Settings</button>
+        </div>
+      )}
       {/* Dashboard Header */}
       <div className="flex justify-between items-center mb-2">
         <div>

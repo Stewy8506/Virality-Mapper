@@ -1,171 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Cpu, Clock } from "lucide-react";
+import { Cpu, Clock, XCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import PostInputFields from "./workspace/PostInputFields";
 import HUDLogConsole from "./workspace/HUDLogConsole";
 import DebateTimeline from "./workspace/DebateTimeline";
-
-interface Agent {
-  id: string;
-  name: string;
-  provider: string;
-  model: string;
-  systemPrompt: string;
-  temperature: number;
-  enabled: boolean;
-}
-
-interface ApiKeys {
-  gemini: string;
-  openai: string;
-  anthropic: string;
-  openrouter: string;
-  ollamaUrl: string;
-  lmStudioUrl: string;
-  customBaseUrl: string;
-  customApiKey: string;
-  serpapi: string;
-}
-
-interface GenerationResult {
-  trends: string[];
-  initialDrafts: Array<{
-    name: string;
-    content: string;
-    hookExplanation: string;
-    provider: string;
-    model: string;
-  }>;
-  critiques: Array<{
-    from: string;
-    to: string;
-    content: string;
-    score: number;
-  }>;
-  refinedDrafts: Array<{
-    name: string;
-    content: string;
-    score: number;
-    argument: string;
-    provider: string;
-    model: string;
-  }>;
-  best: {
-    style: string;
-    content: string;
-    scores?: Record<string, number>;
-    score?: number; // legacy
-    critique: string;
-  };
-}
-
-interface GenerationCompletePayload extends GenerationResult {
-  appName?: string;
-  description?: string;
-  targetAudience?: string;
-  tone?: string;
-}
-
-interface ArchivedPost {
-  id: string;
-  timestamp: string;
-  appName: string;
-  description: string;
-  targetAudience: string;
-  tone: string;
-  result: GenerationResult;
-  performance?: {
-    impressions: number;
-    likes: number;
-    comments: number;
-  };
-}
-
-interface StreamEventData {
-  message?: string;
-  type?: "info" | "warning" | "success";
-  name?: string;
-  content?: string;
-  hookExplanation?: string;
-  provider?: string;
-  model?: string;
-  from?: string;
-  to?: string;
-  score?: number;
-  argument?: string;
-  best?: GenerationResult["best"];
-}
-
-interface UserPreferences {
-  linkedinName: string;
-  linkedinHeadline: string;
-  linkedinAvatar: string;
-  layoutDensity: "compact" | "cozy" | "spacious";
-  sidebarPosition: "left" | "right";
-  autoCopyToClipboard: boolean;
-  defaultHookArchetype: string;
-  fontSize: number;
-  enableRAG: boolean;
-  customFontUrl?: string;
-  customFontFamily?: string;
-}
-
-interface CustomModel {
-  id: string;
-  name: string;
-  provider: string;
-  contextLength?: number;
-  maxOutputTokens?: number;
-}
-
-interface CustomMetric {
-  id: string;
-  name: string;
-  weight: number;
-  scoringInstructions: string;
-}
-
-interface CustomPersona {
-  id: string;
-  name: string;
-  avatar: string;
-  description: string;
-  commentRatio: number;
-}
-
-interface CrawlerConfig {
-  enginePriority: string[];
-  targetYear: number;
-  serpapiEnabled: boolean;
-}
-
-interface AdvancedParams {
-  temperature: number;
-  topP: number;
-  topK: number;
-  presencePenalty: number;
-  frequencyPenalty: number;
-  seed: number;
-  stopSequences: string;
-}
-
-interface MasterConfig {
-  version: number;
-  apiKeys: ApiKeys;
-  preferences: UserPreferences & {
-    theme: string;
-    font: string;
-    showTransitions: boolean;
-  };
-  agents: Agent[];
-  customModels: CustomModel[];
-  customMetrics: CustomMetric[];
-  customPersonas: CustomPersona[];
-  crawlerConfig: CrawlerConfig;
-  advancedParams: AdvancedParams;
-}
+import { getActiveAgents } from "@/lib/defaults";
+import { stripServerConfiguredKeys, validateAgentsHaveKeys, resolveApiKeys } from "@/lib/api-keys";
+import type { Agent, ApiKeys, ArchivedPost, EnrichedSuccessTemplate, GenerationCompletePayload, GenerationResult, MasterConfig, StreamEventData, UserPreferences } from "@/types/domain";
 
 export default function PostGeneratorForm({
   agents,
@@ -221,6 +64,8 @@ export default function PostGeneratorForm({
   const [elapsedTime, setElapsedTime] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const activityContainerRef = useRef<HTMLDivElement | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const streamCompletedRef = useRef(false);
 
   // Auto-scroll activity container to bottom on new log
   useEffect(() => {
@@ -366,10 +211,10 @@ export default function PostGeneratorForm({
 
       case "consensus-complete": {
         const payload = data as { best: GenerationResult["best"] };
+        streamCompletedRef.current = true;
         setSettledPost(payload.best);
         animateSettledText(payload.best.content);
 
-        // Dispatch result after typing transitions complete
         setTimeout(() => {
           onGenerate({
             appName: formData.appName,
@@ -401,6 +246,7 @@ export default function PostGeneratorForm({
       }
 
       case "error": {
+        streamCompletedRef.current = true;
         const payload = data as StreamEventData;
         setError(payload.message || "An unexpected error occurred.");
         setLoading(false);
@@ -412,11 +258,20 @@ export default function PostGeneratorForm({
     }
   };
 
+  const handleCancel = () => {
+    abortControllerRef.current?.abort();
+    setLoading(false);
+    setError("Generation cancelled.");
+    setStatusMessage("");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
     setStatusMessage("Connecting to debate server...");
+    streamCompletedRef.current = false;
+    abortControllerRef.current = new AbortController();
 
     if (onStartGenerate) {
       onStartGenerate();
@@ -439,28 +294,23 @@ export default function PostGeneratorForm({
     critiquesRef.current = [];
     refinementsRef.current = {};
 
-    if (agents.length < 3) {
-      setError("This debate flow requires exactly 3 configured agents in your playground.");
+    const enabledAgents = getActiveAgents(agents);
+    if (enabledAgents.length < 3) {
+      setError("This debate flow requires exactly 3 enabled agents. Enable 3 agents in the Agents tab.");
+      setLoading(false);
+      return;
+    }
+
+    const strippedKeys = stripServerConfiguredKeys(apiKeys);
+    const keyError = validateAgentsHaveKeys(enabledAgents, resolveApiKeys(strippedKeys));
+    if (keyError) {
+      setError(keyError);
       setLoading(false);
       return;
     }
 
     // Load local feedback-loop analytics templates if RAG is enabled
-    let enrichedSuccessTemplates: Array<{
-      content: string;
-      niche: string;
-      metrics: {
-        likes: number;
-        comments: number;
-        reposts: number;
-      };
-      structure: {
-        hook: string;
-        body: string;
-        cta: string;
-        metaphor: string;
-      };
-    }> = [];
+    let enrichedSuccessTemplates: EnrichedSuccessTemplate[] = [];
     if (preferences.enableRAG) {
       try {
         const localArchiveStr = localStorage.getItem("vm_post_archive");
@@ -493,13 +343,23 @@ export default function PostGeneratorForm({
     }
 
     try {
+      try {
+        await fetch("/api/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ apiKeys: strippedKeys }),
+        });
+      } catch (err) {
+        console.warn("Failed to sync session cookie before generation:", err);
+      }
+
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: abortControllerRef.current.signal,
         body: JSON.stringify({
           ...formData,
-          apiKeys,
-          agents,
+          agents: enabledAgents,
           enrichedSuccessTemplates,
           customMetrics: masterConfig.customMetrics,
           customPersonas: masterConfig.customPersonas,
@@ -552,7 +412,13 @@ export default function PostGeneratorForm({
           }
         }
       }
+
+      if (!streamCompletedRef.current) {
+        setError("Stream ended unexpectedly. The server may have timed out — try again or use faster models.");
+        setLoading(false);
+      }
     } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
       const message = err instanceof Error ? err.message : "An unexpected debate pipeline error occurred.";
       setError(message);
       setLoading(false);
@@ -595,15 +461,32 @@ export default function PostGeneratorForm({
             <div className="flex flex-col gap-4 text-center items-center" style={{ borderBottom: "1px solid var(--border-muted)", paddingBottom: "24px" }}>
               <div className="flex items-center gap-4 justify-between w-full">
                 <div className="flex items-center gap-2">
-                  <Cpu className="animate-spin text-rose-500" size={20} />
+                  <Cpu className="animate-spin text-rose-500" size={20} aria-hidden="true" />
                   <h3 style={{ fontSize: "1.25rem", fontWeight: 600, margin: 0 }} className="text-white">Debate Settle Console</h3>
                 </div>
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border text-[11px] font-mono text-zinc-400" style={{ background: "var(--background)", borderColor: "var(--border-muted)" }}>
-                  <Clock size={12} className="text-rose-500 animate-pulse" />
-                  <span>ELAPSED TIME: {formatTime(elapsedTime)}</span>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border text-[11px] font-mono text-zinc-400" style={{ background: "var(--background)", borderColor: "var(--border-muted)" }}>
+                    <Clock size={12} className="text-rose-500 animate-pulse" aria-hidden="true" />
+                    <span>ELAPSED TIME: {formatTime(elapsedTime)}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    className="btn-secondary"
+                    style={{ display: "flex", alignItems: "center", gap: "4px", padding: "4px 10px", fontSize: "0.7rem" }}
+                    aria-label="Cancel generation"
+                  >
+                    <XCircle size={12} aria-hidden="true" />
+                    Cancel
+                  </button>
                 </div>
               </div>
-              <p style={{ fontSize: "0.9rem", color: "var(--zinc-300)", fontWeight: 500, margin: 0 }} className="italic">
+              <p
+                style={{ fontSize: "0.9rem", color: "var(--zinc-300)", fontWeight: 500, margin: 0 }}
+                className="italic"
+                role="status"
+                aria-live="polite"
+              >
                 {statusMessage || "Grounding and preparing agents..."}
               </p>
             </div>
